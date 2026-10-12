@@ -2,40 +2,68 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080910">
 <title>Developer Simulator</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{width:100%;height:100%;overflow:hidden;background:#000;
     font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-    user-select:none;-webkit-user-select:none}
-  canvas{display:block}
+    user-select:none;-webkit-user-select:none;
+    touch-action:none;overscroll-behavior:none;
+    -webkit-text-size-adjust:100%}
+  canvas{display:block;touch-action:none}
 
+  /* ---------- HUD ---------- */
   #hud{
-    position:fixed;left:50%;top:14px;transform:translateX(-50%);
+    position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));
+    transform:translateX(-50%);
     z-index:50;pointer-events:none;
+    max-width:calc(100vw - 16px);
   }
   .hudbar{
     display:flex;align-items:center;gap:14px;
     background:rgba(12,14,22,.85);backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
     border:1px solid rgba(120,160,255,.22);border-radius:14px;
     padding:9px 18px;box-shadow:0 12px 40px rgba(0,0,0,.55);
+    pointer-events:auto;
+    transition:gap .2s, padding .2s;
   }
   .statItem{display:flex;align-items:center;gap:8px;font-size:13px;color:#c8d4ea}
-  .statItem .ic{font-size:16px;line-height:1}
+  .statItem .ic{font-size:16px;line-height:1;flex-shrink:0}
   .statItem .lbl{color:#8494b0;font-weight:600;letter-spacing:.6px;
-    font-size:10px;text-transform:uppercase}
+    font-size:10px;text-transform:uppercase;white-space:nowrap}
   .minibar{width:66px;height:5px;border-radius:4px;background:rgba(255,255,255,.08);
-    overflow:hidden;position:relative}
+    overflow:hidden;position:relative;flex-shrink:0}
   .minibar .fill{height:100%;width:100%;border-radius:4px;
     transition:width .25s linear,background .3s}
   .statItem .val{font-family:ui-monospace,monospace;font-weight:700;color:#e6edf3;
-    font-size:12px;min-width:44px;text-align:right;letter-spacing:.4px}
-  .divider{width:1px;height:22px;background:rgba(255,255,255,.1)}
+    font-size:12px;min-width:44px;text-align:right;letter-spacing:.4px;
+    white-space:nowrap}
+  .divider{width:1px;height:22px;background:rgba(255,255,255,.1);flex-shrink:0}
   #energyBar{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
   #hungerBar{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
   #caffeineBar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);width:0%}
   #timeVal{color:#c9d1d9;font-weight:700;min-width:auto}
+
+  #settingsBtn{
+    background:rgba(96,165,250,.14);
+    border:1px solid rgba(96,165,250,.4);
+    color:#c8d4ea;
+    width:32px;height:32px;border-radius:9px;
+    cursor:pointer;font-size:17px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .2s;padding:0;flex-shrink:0;
+    touch-action:manipulation;
+  }
+  #settingsBtn:hover{
+    background:rgba(96,165,250,.3);
+    border-color:rgba(96,165,250,.8);
+    transform:rotate(45deg);
+  }
 
   .fill.resting{animation:energyRest 1.4s ease-in-out infinite}
   @keyframes energyRest{
@@ -49,7 +77,8 @@
   }
 
   #sleepBtn{
-    position:fixed;left:50%;bottom:96px;
+    position:fixed;left:50%;
+    bottom:calc(96px + env(safe-area-inset-bottom));
     transform:translateX(-50%) translateY(24px) scale(.94);
     z-index:55;
     padding:13px 30px;
@@ -61,15 +90,15 @@
     box-shadow:0 14px 44px rgba(96,165,250,.55);
     opacity:0;pointer-events:none;
     transition:opacity .35s,transform .35s,box-shadow .25s;
+    touch-action:manipulation;
+    white-space:nowrap;
   }
   #sleepBtn.visible{
     opacity:1;pointer-events:auto;
     transform:translateX(-50%) translateY(0) scale(1);
   }
-  #sleepBtn:hover{
-    transform:translateX(-50%) translateY(-3px) scale(1.03);
-    box-shadow:0 18px 60px rgba(96,165,250,.8);
-  }
+  #sleepBtn:hover{transform:translateX(-50%) translateY(-3px) scale(1.03);}
+  #sleepBtn:active{transform:translateX(-50%) translateY(0) scale(.97);}
   #sleepBtn .ic{font-size:17px;margin-right:8px}
 
   #eyelidTop,#eyelidBottom{
@@ -80,10 +109,107 @@
   #eyelidTop{top:0}
   #eyelidBottom{bottom:0}
 
-  /* ---------- Баннер достижения ---------- */
+  /* ---------- Модальное окно ---------- */
+  #settingsModal{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.75);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    z-index:100;display:none;
+    align-items:center;justify-content:center;
+    animation:modalFade .22s ease;
+    padding:20px;
+    overflow-y:auto;
+  }
+  #settingsModal.show{display:flex}
+  @keyframes modalFade{from{opacity:0}to{opacity:1}}
+
+  .modalCard{
+    background:linear-gradient(135deg,rgba(18,22,34,.98),rgba(12,15,26,.98));
+    border:1px solid rgba(120,160,255,.35);
+    border-radius:22px;
+    padding:32px 40px 28px;
+    width:440px;max-width:100%;
+    box-shadow:0 30px 100px rgba(0,0,0,.9), 0 0 80px rgba(96,165,250,.2);
+    animation:modalPop .3s cubic-bezier(.3,1.3,.5,1);
+    color:#c8d4ea;
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+  }
+  @keyframes modalPop{
+    from{transform:scale(.9) translateY(20px);opacity:0}
+    to{transform:scale(1) translateY(0);opacity:1}
+  }
+  .modalCard h2{
+    font-size:22px;font-weight:800;letter-spacing:2px;
+    margin-bottom:6px;color:#e6edf3;
+    display:flex;align-items:center;gap:12px;
+  }
+  .modalCard h2 .ic{font-size:24px}
+  .modalSub{
+    font-size:12px;color:#7d8590;letter-spacing:.4px;
+    margin-bottom:22px;line-height:1.6;
+  }
+  .modalDivider{height:1px;background:rgba(255,255,255,.08);margin:18px 0}
+
+  .modalStat{
+    display:flex;justify-content:space-between;
+    font-size:13px;color:#a0aec0;
+    padding:8px 0;gap:12px;
+  }
+  .modalStat b{color:#e6edf3;font-family:ui-monospace,monospace;font-weight:700;white-space:nowrap}
+
+  .modalBtns{display:flex;flex-direction:column;gap:11px;margin-top:20px}
+  .modalBtn{
+    padding:14px 22px;
+    border-radius:12px;
+    font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.6px;
+    cursor:pointer;border:2px solid transparent;
+    transition:all .18s;touch-action:manipulation;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    min-height:48px;
+  }
+  .modalBtn .ic{font-size:16px}
+  .modalBtnPrimary{
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:#fff;border-color:rgba(140,180,255,.5);
+    box-shadow:0 8px 26px rgba(96,165,250,.4);
+  }
+  .modalBtnPrimary:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 36px rgba(96,165,250,.65);
+  }
+  .modalBtnDanger{
+    background:rgba(220,38,38,.15);
+    color:#ff7b72;border-color:rgba(220,38,38,.5);
+  }
+  .modalBtnDanger:hover{
+    background:rgba(220,38,38,.3);
+    border-color:rgba(220,38,38,.9);
+    transform:translateY(-2px);
+  }
+  .modalBtnGhost{
+    background:rgba(255,255,255,.05);
+    color:#a0aec0;border-color:rgba(255,255,255,.14);
+  }
+  .modalBtnGhost:hover{
+    background:rgba(255,255,255,.1);
+    color:#e6edf3;
+  }
+
+  .toastInline{
+    margin-top:14px;padding:10px 16px;border-radius:10px;
+    font-size:12.5px;text-align:center;
+    animation:toastIn .3s ease;
+  }
+  @keyframes toastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .toastOk{background:rgba(5,150,105,.2);color:#7ee787;border:1px solid rgba(5,150,105,.5)}
+  .toastWarn{background:rgba(220,38,38,.18);color:#ff7b72;border:1px solid rgba(220,38,38,.5)}
+
+  /* ---------- Достижение ---------- */
   .achvBanner {
     position: fixed;
-    top: 90px; left: 50%;
+    top: calc(74px + env(safe-area-inset-top));
+    left: 50%;
     transform: translateX(-50%) translateY(-40px) scale(.88);
     display: flex; gap: 18px; align-items: center;
     background: linear-gradient(135deg, rgba(20,26,42,.98), rgba(30,20,50,.98));
@@ -95,8 +221,8 @@
     opacity: 0;
     transition: opacity .5s cubic-bezier(.3,1.3,.5,1),
                 transform .5s cubic-bezier(.3,1.3,.5,1);
-    pointer-events: none;
-    font-family: inherit;
+    pointer-events: none;font-family: inherit;
+    max-width:calc(100vw - 24px);
   }
   .achvBanner.show {
     opacity: 1;
@@ -105,31 +231,31 @@
   .achvIcon {
     font-size: 54px;
     filter: drop-shadow(0 0 16px rgba(255,215,0,.9));
-    animation: achvIconSpin 1.4s ease;
+    animation: achvIconSpin 1.4s ease;flex-shrink:0;
   }
   @keyframes achvIconSpin {
     0% { transform: rotate(-25deg) scale(.5); }
     60% { transform: rotate(12deg) scale(1.15); }
     100% { transform: rotate(0) scale(1); }
   }
-  .achvInfo { display: flex; flex-direction: column; }
+  .achvInfo { display: flex; flex-direction: column; min-width:0; }
   .achvLbl {
     font-size: 11px; letter-spacing: 4px; color: #ffd700;
     font-weight: 800; text-transform: uppercase; margin-bottom: 3px;
   }
-  .achvTitle {
-    font-size: 24px; font-weight: 800; color: #fff;
-    letter-spacing: 1px;
-  }
-  .achvDesc {
-    font-size: 13px; color: #a0aec0;
-    margin-top: 4px;
-  }
+  .achvTitle { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+  .achvDesc { font-size: 13px; color: #a0aec0; margin-top: 4px; }
 
-  #toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;
-    align-items:flex-end;gap:10px;z-index:60;pointer-events:none}
+  #toasts{
+    position:fixed;right:12px;
+    bottom:calc(12px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;
+    align-items:flex-end;gap:8px;z-index:60;pointer-events:none;
+    max-width:calc(100vw - 24px);
+  }
   .toast{
     background:rgba(12,14,22,.9);backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
     border:1px solid rgba(120,160,255,.35);border-left:3px solid #7ee787;
     color:#dbe4f5;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:500;
     box-shadow:0 10px 34px rgba(0,0,0,.6);
@@ -137,17 +263,21 @@
   }
 
   #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;
-    transition:opacity 1.1s ease;z-index:70;display:flex;align-items:center;justify-content:center}
+    transition:opacity 1.1s ease;z-index:70;display:flex;align-items:center;justify-content:center;
+    padding:20px;text-align:center}
   #fadeTxt{color:#8899bb;font-size:26px;font-weight:600;letter-spacing:3px;opacity:0;
     transition:opacity .8s;text-transform:uppercase}
 
   #intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    z-index:65;pointer-events:none;transition:opacity 1s}
+    z-index:65;pointer-events:none;transition:opacity 1s;padding:20px}
   #introCard{
     background:rgba(10,12,20,.85);backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
     border:1px solid rgba(120,160,255,.2);border-radius:20px;
     padding:30px 44px;text-align:center;color:#c8d4ea;
-    box-shadow:0 24px 70px rgba(0,0,0,.7);animation:pop .7s cubic-bezier(.2,1.2,.4,1)
+    box-shadow:0 24px 70px rgba(0,0,0,.7);
+    animation:pop .7s cubic-bezier(.2,1.2,.4,1);
+    max-width:min(560px,100%);
   }
   @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
   #introCard h1{font-size:30px;letter-spacing:4px;margin-bottom:6px;
@@ -157,16 +287,22 @@
   #introCard kbd{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);
     border-radius:6px;padding:2px 9px;font-size:12px;color:#cfe0ff;font-family:inherit}
 
-  #hint{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);
+  #hint{position:fixed;left:50%;
+    bottom:calc(34px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
     color:#93a3c0;font-size:13px;letter-spacing:.6px;z-index:12;pointer-events:none;
     background:rgba(12,14,22,.75);border:1px solid rgba(120,160,255,.16);
     padding:10px 22px;border-radius:30px;backdrop-filter:blur(12px);
-    opacity:0;transition:opacity .35s}
+    -webkit-backdrop-filter:blur(12px);
+    opacity:0;transition:opacity .35s;
+    max-width:calc(100vw - 24px);text-align:center;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
   #hint.show{opacity:1}
 
   #screenBackdrop {
     position: fixed;inset: 0;
     background: rgba(0,0,0,.9);backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 40;display: none;animation: bdIn .28s ease;
   }
   #screenBackdrop.active { display: block; }
@@ -181,11 +317,120 @@
       0 40px 100px rgba(0,0,0,.9);
     cursor: default;
     animation: scIn .32s cubic-bezier(.2,1.1,.35,1);
+    touch-action:none;
   }
   #screenCanvas.active { display: block; }
   @keyframes scIn {
     from { transform: scale(.86); opacity: 0; filter: blur(6px); }
     to   { transform: scale(1);   opacity: 1; filter: blur(0); }
+  }
+
+  /* Скрытый ввод для мобильной клавиатуры */
+  #mobileInput {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 30px;
+    opacity: 0.01;
+    z-index: 9999;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    font-size: 16px;
+    resize: none;
+    padding: 0;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     МОБИЛЬНАЯ АДАПТАЦИЯ
+     ============================================================ */
+  @media (max-width: 900px) {
+    .hudbar { gap: 9px; padding: 7px 12px; border-radius: 12px; }
+    .statItem { gap: 6px; }
+    .statItem .lbl { display: none; }
+    .statItem .val { min-width: 36px; font-size: 11px; }
+    .minibar { width: 46px; }
+    .divider { height: 18px; }
+    #settingsBtn { width: 30px; height: 30px; font-size: 15px; }
+  }
+
+  @media (max-width: 620px) {
+    #hud { top: calc(6px + env(safe-area-inset-top)); }
+    .hudbar { gap: 6px; padding: 6px 10px; border-radius: 10px; }
+    .statItem { gap: 4px; }
+    .statItem .ic { font-size: 13px; }
+    .statItem .val { min-width: 30px; font-size: 10px; letter-spacing: 0; }
+    .minibar { width: 30px; height: 4px; }
+    .divider { height: 14px; }
+    #settingsBtn { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
+
+    #sleepBtn {
+      padding: 16px 36px;
+      font-size: 17px;
+      bottom: calc(70px + env(safe-area-inset-bottom));
+      border-radius: 16px;
+    }
+
+    .modalCard { padding: 22px 20px 20px; border-radius: 18px; }
+    .modalCard h2 { font-size: 18px; letter-spacing: 1.5px; }
+    .modalCard h2 .ic { font-size: 20px; }
+    .modalSub { font-size: 11px; margin-bottom: 16px; }
+    .modalStat { font-size: 12px; padding: 7px 0; }
+    .modalBtn { font-size: 14px; padding: 15px 18px; min-height: 52px; }
+    .modalBtns { gap: 10px; }
+
+    .toast { font-size: 12px; padding: 10px 14px; max-width: 240px; }
+
+    .achvBanner {
+      padding: 12px 16px;gap: 12px;border-radius: 14px;
+      top: calc(58px + env(safe-area-inset-top));
+    }
+    .achvIcon { font-size: 38px; }
+    .achvTitle { font-size: 18px; letter-spacing: .5px; }
+    .achvLbl { font-size: 9px; letter-spacing: 2.5px; }
+    .achvDesc { font-size: 11px; }
+
+    #introCard { padding: 22px 20px; border-radius: 16px; }
+    #introCard h1 { font-size: 22px; letter-spacing: 2px; }
+    #introCard p { font-size: 11.5px; line-height: 1.8; margin-top: 10px; }
+    #introCard kbd { font-size: 11px; padding: 2px 6px; }
+    #introCard div[style*="font-size:12px"] { font-size: 10px !important; letter-spacing: 2px !important; }
+
+    #fadeTxt { font-size: 18px; letter-spacing: 2px; }
+    #hint { font-size: 11.5px; padding: 8px 16px; }
+  }
+
+  @media (max-width: 380px) {
+    .hudbar { gap: 5px; padding: 5px 8px; }
+    .statItem .ic { font-size: 12px; }
+    .statItem .val { min-width: 26px; font-size: 9px; }
+    .minibar { width: 24px; }
+    .divider { height: 12px; }
+    #settingsBtn { width: 26px; height: 26px; font-size: 13px; }
+  }
+
+  /* Ландшафт на телефонах */
+  @media (max-height: 480px) and (orientation: landscape) {
+    .hudbar { padding: 5px 10px; gap: 8px; }
+    .statItem .lbl { display: none; }
+    .minibar { width: 36px; height: 4px; }
+    .statItem .val { font-size: 10px; min-width: 30px; }
+    #hud { top: calc(4px + env(safe-area-inset-top)); }
+    #sleepBtn {
+      padding: 11px 24px;font-size: 14px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+    }
+    #introCard { padding: 16px 20px; }
+    #introCard h1 { font-size: 18px; }
+    #introCard p { font-size: 10px; line-height: 1.6; margin-top: 6px; }
+    #toasts { bottom: calc(8px + env(safe-area-inset-bottom)); }
+    .toast { font-size: 11px; padding: 8px 12px; }
   }
 </style>
 </head>
@@ -218,6 +463,8 @@
       <div class="minibar"><div class="fill" id="caffeineBar"></div></div>
       <span class="val" id="caffeineVal">0%</span>
     </div>
+    <div class="divider"></div>
+    <button id="settingsBtn" title="Настройки">⚙</button>
   </div>
 </div>
 
@@ -228,6 +475,37 @@
 <div id="toasts"></div>
 <div id="hint"></div>
 
+<textarea id="mobileInput" autocomplete="off" autocorrect="off" autocapitalize="off"
+  spellcheck="false" aria-hidden="true"></textarea>
+
+<div id="settingsModal">
+  <div class="modalCard">
+    <h2><span class="ic">⚙️</span>НАСТРОЙКИ</h2>
+    <div class="modalSub">Прогресс сохраняется в вашем браузере (localStorage). Данные не уходят на сервер.</div>
+
+    <div class="modalStat"><span>💰 Баланс</span><b id="msBalance">$120</b></div>
+    <div class="modalStat"><span>✅ Заданий выполнено</span><b id="msTasks">0</b></div>
+    <div class="modalStat"><span>🏆 Достижений открыто</span><b id="msAchievements">0 / 5</b></div>
+    <div class="modalStat"><span>💾 Последнее сохранение</span><b id="msSaved">—</b></div>
+
+    <div class="modalDivider"></div>
+
+    <div class="modalBtns">
+      <button class="modalBtn modalBtnPrimary" id="saveBtn">
+        <span class="ic">💾</span>Сохранить прогресс
+      </button>
+      <button class="modalBtn modalBtnDanger" id="clearBtn">
+        <span class="ic">🗑</span>Очистить прогресс
+      </button>
+      <button class="modalBtn modalBtnGhost" id="closeBtn">
+        <span class="ic">✕</span>Закрыть
+      </button>
+    </div>
+
+    <div id="modalToast"></div>
+  </div>
+</div>
+
 <div id="fade"><div id="fadeTxt"></div></div>
 
 <div id="intro">
@@ -235,11 +513,11 @@
     <h1>DEVELOPER SIMULATOR</h1>
     <div style="font-size:12px;letter-spacing:3px;color:#5a6a88">СИМУЛЯТОР ЖИЗНИ РАЗРАБОТЧИКА</div>
     <p>
-      <kbd>Движение мыши</kbd> — осмотреться<br>
-      <kbd>ЛКМ по ноутбуку</kbd> — раскрыть экран на весь вид<br>
-      <kbd>ЛКМ по коду</kbd> — поставить курсор в нужное место<br>
-      <kbd>Esc / клик мимо</kbd> — закрыть экран и отдохнуть<br>
-      <kbd>W A S D</kbd> — встать <span style="color:#ff7b72">(недоступно: слишком лень)</span>
+      <kbd>Свайп</kbd> — осмотреться<br>
+      <kbd>Тап по ноутбуку</kbd> — открыть экран<br>
+      <kbd>Тап по коду</kbd> — поставить курсор<br>
+      <kbd>Тап мимо</kbd> — закрыть и отдохнуть<br>
+      <kbd>⚙ в шапке</kbd> — настройки и сохранение
     </p>
   </div>
 </div>
@@ -256,6 +534,14 @@
 import * as THREE from 'three';
 
 /* ============================================================
+   ОПРЕДЕЛЕНИЕ МОБИЛЬНОГО УСТРОЙСТВА
+   ============================================================ */
+const isTouch = ('ontouchstart' in window) ||
+                (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
+                window.matchMedia('(pointer: coarse)').matches;
+const isMobile = isTouch && (innerWidth < 1100 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+
+/* ============================================================
    RENDERER / SCENE / CAMERA
    ============================================================ */
 const scene = new THREE.Scene();
@@ -269,10 +555,13 @@ camera.rotation.order = 'YXZ';
 const BASE_CAM_Y = 1.16;
 const BASE_CAM_Z = 0.18;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  antialias: !isMobile,
+  powerPreference: isMobile ? 'default' : 'high-performance'
+});
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+renderer.setPixelRatio(isMobile ? Math.min(devicePixelRatio, 1.5) : Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = !isMobile;   // на мобилках экономим — без теней
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -287,9 +576,11 @@ scene.add(new THREE.HemisphereLight(0x4a6ba8, 0x1a1410, 0.55));
 
 const roomLight = new THREE.PointLight(0xffcf9a, 6, 9, 2);
 roomLight.position.set(-1.6, 2.4, -0.6);
-roomLight.castShadow = true;
-roomLight.shadow.mapSize.set(1024, 1024);
-roomLight.shadow.bias = -0.0018;
+if (!isMobile) {
+  roomLight.castShadow = true;
+  roomLight.shadow.mapSize.set(1024, 1024);
+  roomLight.shadow.bias = -0.0018;
+}
 scene.add(roomLight);
 
 const windowLight = new THREE.PointLight(0x5b8fd6, 3.2, 9, 2);
@@ -321,13 +612,11 @@ room.add(wallBack);
 const wallLeft = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), wallMat);
 wallLeft.rotation.y = Math.PI / 2;
 wallLeft.position.set(-4, 3, 0);
-wallLeft.receiveShadow = true;
 room.add(wallLeft);
 
 const wallRight = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), wallMat);
 wallRight.rotation.y = -Math.PI / 2;
 wallRight.position.set(4, 3, 0);
-wallRight.receiveShadow = true;
 room.add(wallRight);
 
 const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(16, 16),
@@ -336,7 +625,7 @@ ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = 3;
 room.add(ceiling);
 
-// ---- Окно ----
+// Окно
 const windowGroup = new THREE.Group();
 windowGroup.position.set(-3.98, 1.75, -0.4);
 windowGroup.rotation.y = Math.PI / 2;
@@ -350,7 +639,7 @@ const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.25), winGlassMat)
 windowGroup.add(winGlass);
 
 const cityDots = [];
-for (let i = 0; i < 42; i++) {
+for (let i = 0; i < 30; i++) {
   const w = 0.02 + Math.random() * 0.05;
   const h = 0.01 + Math.random() * 0.03;
   const dot = new THREE.Mesh(
@@ -372,7 +661,7 @@ const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.4, 0.1), winFrameMat
 frameL.position.set(-0.89, 0, 0.03); windowGroup.add(frameL);
 const frameR = frameL.clone(); frameR.position.set(0.89, 0, 0.03); windowGroup.add(frameR);
 
-// ---- Постер ----
+// Постер
 const posterCanvas = document.createElement('canvas');
 posterCanvas.width = 512; posterCanvas.height = 700;
 const pctx = posterCanvas.getContext('2d');
@@ -404,7 +693,7 @@ poster.position.set(-1.65, 1.85, -3.98);
 room.add(poster);
 
 /* ============================================================
-   ДОСТИЖЕНИЯ — РАМКИ НА СТЕНЕ
+   ДОСТИЖЕНИЯ
    ============================================================ */
 const ACHIEVEMENTS = [
   { count: 10,  title: 'Новичок',  icon: '🌱', color: '#7ee787' },
@@ -428,13 +717,11 @@ function drawAchievementCanvas(c, ach, unlocked) {
   }
   c.fillRect(0, 0, w, h);
 
-  // рамка
   c.strokeStyle = unlocked ? '#ffd700' : '#2a3040';
   c.lineWidth = 8;
   c.strokeRect(10, 10, w - 20, h - 20);
 
   if (unlocked) {
-    // декоративные уголки
     c.strokeStyle = ach.color || '#ffd700';
     c.lineWidth = 3;
     const m = 22, L = 26;
@@ -443,41 +730,27 @@ function drawAchievementCanvas(c, ach, unlocked) {
     c.beginPath(); c.moveTo(m, h - m - L); c.lineTo(m, h - m); c.lineTo(m + L, h - m); c.stroke();
     c.beginPath(); c.moveTo(w - m - L, h - m); c.lineTo(w - m, h - m); c.lineTo(w - m, h - m - L); c.stroke();
 
-    // иконка
     c.font = '80px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(ach.icon, w / 2, h * 0.34);
 
-    // название
     c.fillStyle = '#ffd700';
     c.font = 'bold 26px system-ui, sans-serif';
     c.fillText(ach.title, w / 2, h * 0.62);
 
-    // количество
     c.fillStyle = '#e6edf3';
     c.font = 'bold 40px ui-monospace, monospace';
     c.fillText(ach.count, w / 2, h * 0.82);
-
-    // блик
-    const sh = c.createLinearGradient(0, 0, w, h);
-    sh.addColorStop(0, 'rgba(255,215,0,.18)');
-    sh.addColorStop(.5, 'rgba(255,215,0,0)');
-    sh.addColorStop(1, 'rgba(255,215,0,.10)');
-    c.fillStyle = sh;
-    c.fillRect(10, 10, w - 20, h - 20);
   } else {
-    // замок
     c.font = '96px "Segoe UI Emoji","Apple Color Emoji",sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = 'rgba(120,140,170,.45)';
     c.fillText('🔒', w / 2, h * 0.42);
 
-    // количество заданий
     c.fillStyle = 'rgba(120,140,170,.6)';
     c.font = 'bold 22px ui-monospace, monospace';
     c.fillText(ach.count + ' заданий', w / 2, h * 0.72);
 
-    // подсказка
     c.fillStyle = 'rgba(120,140,170,.35)';
     c.font = '600 14px system-ui, sans-serif';
     c.fillText('ЗАБЛОКИРОВАНО', w / 2, h * 0.86);
@@ -495,12 +768,9 @@ function createAchievementFrames() {
 
     const frame = new THREE.Mesh(
       new THREE.BoxGeometry(0.36, 0.44, 0.028),
-      new THREE.MeshStandardMaterial({
-        color: 0x2a2018, roughness: 0.7, metalness: 0.35
-      })
+      new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.7, metalness: 0.35 })
     );
     frame.position.set(x, y, z + 0.012);
-    frame.castShadow = true;
     scene.add(frame);
 
     const canvas = document.createElement('canvas');
@@ -510,7 +780,6 @@ function createAchievementFrames() {
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(0.30, 0.38),
@@ -559,7 +828,6 @@ const woodDarkMat = new THREE.MeshStandardMaterial({ color: 0x3d2617, roughness:
 
 const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.045, 0.75), woodMat);
 deskTop.position.y = 0.75 - 0.0225;
-deskTop.castShadow = true;
 deskTop.receiveShadow = true;
 desk.add(deskTop);
 
@@ -571,21 +839,18 @@ const legGeo = new THREE.BoxGeometry(0.06, 0.72, 0.06);
 [[-0.8, -0.3], [0.8, -0.3], [-0.8, 0.3], [0.8, 0.3]].forEach(([x, z]) => {
   const leg = new THREE.Mesh(legGeo, woodDarkMat);
   leg.position.set(x, 0.36, z);
-  leg.castShadow = true;
   desk.add(leg);
 });
 
 const padMat = new THREE.MeshStandardMaterial({ color: 0x151821, roughness: 0.95 });
 const pad = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.004, 0.26), padMat);
 pad.position.set(0.55, 0.7545, -0.03);
-pad.receiveShadow = true;
 desk.add(pad);
 
 const mouseMat = new THREE.MeshStandardMaterial({ color: 0x22252e, roughness: 0.4, metalness: 0.25 });
 const mouseBody = new THREE.Mesh(new THREE.SphereGeometry(0.035, 20, 14), mouseMat);
 mouseBody.scale.set(1, 0.55, 1.45);
 mouseBody.position.set(0.55, 0.771, -0.03);
-mouseBody.castShadow = true;
 desk.add(mouseBody);
 const mouseLine = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.002, 0.03),
   new THREE.MeshStandardMaterial({ color: 0x0a0c11 }));
@@ -613,13 +878,10 @@ const BASE_W = 0.345, BASE_D = 0.245, BASE_H = 0.015;
 
 const baseBottom = new THREE.Mesh(new THREE.BoxGeometry(BASE_W, BASE_H * 0.62, BASE_D), aluDarkMat);
 baseBottom.position.y = BASE_H * 0.31;
-baseBottom.castShadow = true;
-baseBottom.receiveShadow = true;
 laptop.add(baseBottom);
 
 const baseTop = new THREE.Mesh(new THREE.BoxGeometry(BASE_W * 0.995, BASE_H * 0.42, BASE_D * 0.995), aluMat);
 baseTop.position.y = BASE_H * 0.62 + BASE_H * 0.21;
-baseTop.castShadow = true;
 laptop.add(baseTop);
 
 const KB_W = 0.30, KB_D = 0.105;
@@ -644,16 +906,13 @@ const keyTopGeo = new THREE.BoxGeometry(KW * 0.9, 0.0009, KD * 0.86);
 for (let r = 0; r < ROWS; r++) {
   for (let c = 0; c < COLS; c++) {
     if (r === ROWS - 1 && c >= 4 && c <= 9) continue;
-
     const k = new THREE.Mesh(keyGeo, keyMat);
     const x = startX + c * (KW + GAP_X);
     const z = startZ + r * (KD + GAP_Z);
     k.position.set(x, BASE_H * 0.83 + 0.0015 + 0.0021, z);
-    k.castShadow = true;
     k.userData.baseY = k.position.y;
     keysGroup.add(k);
     allKeys.push(k);
-
     const kt = new THREE.Mesh(keyTopGeo, keyTopMat);
     kt.position.set(0, 0.0023, 0);
     k.add(kt);
@@ -661,7 +920,6 @@ for (let r = 0; r < ROWS; r++) {
 }
 const spaceKey = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.0042, KD), keyMat);
 spaceKey.position.set(0, BASE_H * 0.83 + 0.0015 + 0.0021, startZ + (ROWS - 1) * (KD + GAP_Z));
-spaceKey.castShadow = true;
 spaceKey.userData.baseY = spaceKey.position.y;
 keysGroup.add(spaceKey);
 allKeys.push(spaceKey);
@@ -676,18 +934,10 @@ const trackpad = new THREE.Mesh(new THREE.BoxGeometry(0.098, 0.0016, 0.062),
 trackpad.position.set(0, BASE_H * 0.83 + 0.0024, 0.082);
 laptop.add(trackpad);
 
-const footGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.0035, 14);
-[[-0.14, -0.10], [0.14, -0.10], [-0.14, 0.10], [0.14, 0.10]].forEach(([x, z]) => {
-  const f = new THREE.Mesh(footGeo, rubberMat);
-  f.position.set(x, -0.0015, z);
-  laptop.add(f);
-});
-
 const portMat = new THREE.MeshStandardMaterial({ color: 0x08090c, roughness: 0.9 });
 [-0.09, -0.045, 0.0, 0.05].forEach((z, i) => {
   const p = new THREE.Mesh(
-    new THREE.BoxGeometry(0.0025, i === 3 ? 0.006 : 0.0035, i === 3 ? 0.02 : 0.012),
-    portMat
+    new THREE.BoxGeometry(0.0025, i === 3 ? 0.006 : 0.0035, i === 3 ? 0.02 : 0.012), portMat
   );
   p.position.set(-BASE_W / 2 - 0.001, BASE_H * 0.45, z);
   laptop.add(p);
@@ -707,7 +957,6 @@ const LID_W = 0.345, LID_H = 0.225, LID_T = 0.0085;
 
 const lidBack = new THREE.Mesh(new THREE.BoxGeometry(LID_W, LID_H, LID_T), aluMat);
 lidBack.position.set(0, LID_H / 2, 0);
-lidBack.castShadow = true;
 screenGroup.add(lidBack);
 
 const lidInner = new THREE.Mesh(new THREE.BoxGeometry(LID_W * 0.985, LID_H * 0.985, 0.0025), bezelMat);
@@ -724,7 +973,6 @@ const ctx = screenCanvas.getContext('2d');
 
 const screenTexture = new THREE.CanvasTexture(screenCanvas);
 screenTexture.colorSpace = THREE.SRGBColorSpace;
-screenTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 screenTexture.minFilter = THREE.LinearFilter;
 
 const SCREEN_W = 0.298, SCREEN_H = 0.186;
@@ -733,16 +981,6 @@ const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), s
 screenMesh.position.set(0, LID_H / 2, LID_T / 2 + 0.0026);
 screenMesh.userData.type = 'screen';
 screenGroup.add(screenMesh);
-
-const glare = new THREE.Mesh(
-  new THREE.PlaneGeometry(SCREEN_W, SCREEN_H),
-  new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.028,
-    blending: THREE.AdditiveBlending, depthWrite: false
-  })
-);
-glare.position.set(0, LID_H / 2, LID_T / 2 + 0.0030);
-screenGroup.add(glare);
 
 const camDot = new THREE.Mesh(
   new THREE.CircleGeometry(0.0028, 12),
@@ -768,11 +1006,10 @@ const hingeGeo = new THREE.CylinderGeometry(0.0085, 0.0085, 0.06, 16);
 });
 const hingeBar = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.22, 12), chromeMat);
 hingeBar.rotation.z = Math.PI / 2;
-hingeBar.position.set(0, 0, 0);
 laptop.add(hingeBar);
 
 /* ============================================================
-   КРУЖКА С КОФЕ
+   КРУЖКА
    ============================================================ */
 const mug = new THREE.Group();
 mug.position.set(0.33, 0.75, -0.30);
@@ -781,39 +1018,37 @@ scene.add(mug);
 const ceramicMat = new THREE.MeshStandardMaterial({
   color: 0xf0f1f4, roughness: 0.28, metalness: 0.04, side: THREE.DoubleSide
 });
-const mugBody = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.037, 0.105, 36, 1, true), ceramicMat);
+const mugBody = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.037, 0.105, 32, 1, true), ceramicMat);
 mugBody.position.y = 0.0525;
-mugBody.castShadow = true;
 mugBody.userData.type = 'mug';
 mug.add(mugBody);
 
-const mugBottom = new THREE.Mesh(new THREE.CircleGeometry(0.037, 36), ceramicMat);
+const mugBottom = new THREE.Mesh(new THREE.CircleGeometry(0.037, 32), ceramicMat);
 mugBottom.rotation.x = -Math.PI / 2;
 mugBottom.position.y = 0.001;
 mug.add(mugBottom);
 
-const mugRim = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.0022, 8, 36), ceramicMat);
+const mugRim = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.0022, 8, 32), ceramicMat);
 mugRim.rotation.x = Math.PI / 2;
 mugRim.position.y = 0.105;
 mugRim.userData.type = 'mug';
 mug.add(mugRim);
 
-const handle = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.0068, 12, 26, Math.PI), ceramicMat);
+const handle = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.0068, 10, 22, Math.PI), ceramicMat);
 handle.rotation.z = -Math.PI / 2;
 handle.position.set(0.040, 0.055, 0);
-handle.castShadow = true;
 handle.userData.type = 'mug';
 mug.add(handle);
 
 const coffeeMat = new THREE.MeshStandardMaterial({ color: 0x3a1f10, roughness: 0.15, metalness: 0.1 });
-const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.0395, 36), coffeeMat);
+const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.0395, 32), coffeeMat);
 coffee.rotation.x = -Math.PI / 2;
 coffee.position.y = 0.088;
 coffee.userData.type = 'mug';
 mug.add(coffee);
 
 const foam = new THREE.Mesh(
-  new THREE.CircleGeometry(0.0395, 36),
+  new THREE.CircleGeometry(0.0395, 32),
   new THREE.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.85, transparent: true, opacity: 0.75 })
 );
 foam.rotation.x = -Math.PI / 2;
@@ -826,7 +1061,6 @@ const coaster = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: 0x2b2f38, roughness: 0.9 })
 );
 coaster.position.set(0.33, 0.7525, -0.30);
-coaster.receiveShadow = true;
 scene.add(coaster);
 
 /* ============================================================
@@ -836,19 +1070,16 @@ const chairMat = new THREE.MeshStandardMaterial({ color: 0x1c1f27, roughness: 0.
 [-0.48, 0.48].forEach(x => {
   const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.045, 0.44), chairMat);
   arm.position.set(x, 0.80, 0.12);
-  arm.castShadow = true;
   scene.add(arm);
-
   const armPost = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.28, 12), chairMat);
   armPost.position.set(x, 0.65, 0.12);
   scene.add(armPost);
 });
 
-// создаём рамки достижений
 createAchievementFrames();
 
 /* ============================================================
-   ГЕНЕРАТОР ЗАДАНИЙ — 5 строк, 200+ вариантов
+   ГЕНЕРАТОР ЗАДАНИЙ
    ============================================================ */
 function generateTasks() {
   const tasks = [];
@@ -1029,34 +1260,102 @@ console.log(joined.length);`);
 }
 
 /* ============================================================
+   СОХРАНЕНИЕ
+   ============================================================ */
+const SAVE_KEY = 'devsim.save.v1';
+
+function serializeState() {
+  return {
+    v: 1,
+    savedAt: Date.now(),
+    money: state.money, energy: state.energy, hunger: state.hunger,
+    caffeine: state.caffeine, clock: state.clock,
+    completedTasks: state.completedTasks,
+    achievements: state.achievements.slice(),
+    orderQty: state.orderQty.slice(),
+    transactions: state.transactions.slice(-30),
+    foodOnDesk: state.foodOnDesk ? {
+      itemIdx: FOOD_MENU.findIndex(f => f.name === state.foodOnDesk.item.name),
+      count: state.foodOnDesk.count
+    } : null
+  };
+}
+
+function saveProgress(silent = false) {
+  try {
+    const data = serializeState();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    lastSavedAt = data.savedAt;
+    if (!silent) {
+      settingsBtn.style.background = 'rgba(126,231,135,.4)';
+      setTimeout(() => { settingsBtn.style.background = ''; }, 500);
+    }
+    return true;
+  } catch (e) { return false; }
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || data.v !== 1) return false;
+
+    if (typeof data.money === 'number') state.money = data.money;
+    if (typeof data.energy === 'number') state.energy = data.energy;
+    if (typeof data.hunger === 'number') state.hunger = data.hunger;
+    if (typeof data.caffeine === 'number') state.caffeine = data.caffeine;
+    if (typeof data.clock === 'number') state.clock = data.clock;
+    if (typeof data.completedTasks === 'number') state.completedTasks = data.completedTasks;
+    if (Array.isArray(data.achievements)) {
+      state.achievements = data.achievements.slice(0, 5);
+      while (state.achievements.length < 5) state.achievements.push(false);
+    }
+    if (Array.isArray(data.orderQty)) {
+      state.orderQty = data.orderQty.slice(0, 4);
+      while (state.orderQty.length < 4) state.orderQty.push(1);
+    }
+    if (Array.isArray(data.transactions)) state.transactions = data.transactions.slice(-30);
+    if (data.foodOnDesk && typeof data.foodOnDesk.itemIdx === 'number') {
+      const item = FOOD_MENU[data.foodOnDesk.itemIdx];
+      if (item && data.foodOnDesk.count > 0) {
+        state.foodOnDesk = { item, count: data.foodOnDesk.count };
+      }
+    }
+    lastSavedAt = data.savedAt || Date.now();
+    state.achievements.forEach((unlocked, i) => { if (unlocked) unlockAchievementMesh(i); });
+    return true;
+  } catch (e) { return false; }
+}
+
+function clearProgress() {
+  try { localStorage.removeItem(SAVE_KEY); return true; } catch (e) { return false; }
+}
+
+let lastSavedAt = 0;
+
+/* ============================================================
    СОСТОЯНИЕ
    ============================================================ */
 const state = {
-  money: 120,
-  energy: 100,
-  hunger: 100,
-  caffeine: 0,
-  screen: 'desktop',
-  delivery: null,          // {t, total, item, qty}
-  foodOnDesk: null,        // { item, count }
-  passedOut: false,
-  sleeping: false,
-  focused: false,
+  money: 120, energy: 100, hunger: 100, caffeine: 0,
+  screen: 'desktop', delivery: null, foodOnDesk: null,
+  passedOut: false, sleeping: false, focused: false,
   clock: 9 * 60,
-  codeTasks: null,
-  codeTaskIdx: 0,
-  codeTarget: '',
-  codeTyped: '',
-  codeCursor: 0,
-  codeComplete: false,
-  codeCompleteT: 0,
+  codeTasks: null, codeTaskIdx: 0, codeTarget: '', codeTyped: '',
+  codeCursor: 0, codeComplete: false, codeCompleteT: 0,
   completedTasks: 0,
   achievements: [false, false, false, false, false],
   orderQty: [1, 1, 1, 1],
-  transactions: [
-    { text: 'Стартовый капитал', amount: 120 }
-  ]
+  transactions: [{ text: 'Стартовый капитал', amount: 120 }]
 };
+
+const FOOD_MENU = [
+  { name: 'Пицца Пепперони', price: 15, food: 40, time: 9,  emoji: '🍕' },
+  { name: 'Двойной Бургер',  price: 10, food: 28, time: 6,  emoji: '🍔' },
+  { name: 'Суши-сет',        price: 25, food: 55, time: 14, emoji: '🍣' },
+  { name: 'Шаурма XL',       price: 8,  food: 22, time: 5,  emoji: '🌯' },
+];
 
 state.codeTasks = generateTasks();
 state.codeTarget = state.codeTasks[0];
@@ -1071,13 +1370,16 @@ document.body.appendChild(screenBackdrop);
 const sleepBtn = document.getElementById('sleepBtn');
 const eyelidTop = document.getElementById('eyelidTop');
 const eyelidBottom = document.getElementById('eyelidBottom');
+const mobileInput = document.getElementById('mobileInput');
 
 function layoutOverlay() {
-  const PAD = 60;
-  const vw = innerWidth;
-  const vh = innerHeight;
-  const availW = vw - PAD * 2;
-  const availH = vh - PAD * 2;
+  const vw = innerWidth, vh = innerHeight;
+  const isNarrow = vw < 700;
+  const PAD_H = isNarrow ? 8 : 60;
+  const PAD_TOP = isNarrow ? 78 : 60;
+  const PAD_BOTTOM = isNarrow ? 8 : 60;
+  const availW = vw - PAD_H * 2;
+  const availH = vh - PAD_TOP - PAD_BOTTOM;
   const ca = SCR_W / SCR_H;
   let w, h;
   if (availW / availH > ca) { h = availH; w = h * ca; }
@@ -1085,7 +1387,7 @@ function layoutOverlay() {
   screenCanvas.style.width = w + 'px';
   screenCanvas.style.height = h + 'px';
   screenCanvas.style.left = ((vw - w) / 2) + 'px';
-  screenCanvas.style.top = ((vh - h) / 2) + 'px';
+  screenCanvas.style.top = (PAD_TOP + (availH - h) / 2) + 'px';
 }
 
 function setFocused(v) {
@@ -1099,22 +1401,18 @@ function setFocused(v) {
     screenBackdrop.classList.remove('active');
     screenCanvas.classList.remove('active');
     screenCanvas.style.cursor = 'default';
+    if (document.activeElement === mobileInput) mobileInput.blur();
   }
 }
 
 screenBackdrop.addEventListener('click', () => setFocused(false));
 
 /* ============================================================
-   LAYOUT КОДА
+   LAYOUT
    ============================================================ */
 const CODE_LAYOUT = {
-  taskY: 54,
-  taskH: 246,
-  inputH: 246,
-  headerH: 38,
-  lineH: 34,
-  inputX0: 40,
-  inputFirstLineOffset: 70,
+  taskY: 54, taskH: 246, inputH: 246, headerH: 38, lineH: 34,
+  inputX0: 40, inputFirstLineOffset: 70,
   font: '22px ui-monospace, "SF Mono", Consolas, "Courier New", monospace'
 };
 
@@ -1128,8 +1426,7 @@ function getCursorIndexFromClick(cx, cy) {
   const lineIdx = Math.max(0, Math.round(relY / CODE_LAYOUT.lineH));
 
   const typed = state.codeTyped;
-  let curLine = 0;
-  let lineStart = 0;
+  let curLine = 0, lineStart = 0;
 
   for (let i = 0; i <= typed.length; i++) {
     const atEnd = i === typed.length;
@@ -1149,37 +1446,15 @@ function getCursorIndexFromClick(cx, cy) {
 }
 
 /* ============================================================
-   СОБЫТИЯ ОВЕРЛЕЯ
+   ОБРАБОТЧИКИ ОВЕРЛЕЯ
    ============================================================ */
-screenCanvas.addEventListener('mousemove', (e) => {
-  if (!state.focused) return;
-  const r = screenCanvas.getBoundingClientRect();
-  const x = ((e.clientX - r.left) / r.width) * SCR_W;
-  const y = ((e.clientY - r.top) / r.height) * SCR_H;
-
-  let over = false;
-  for (const c of clickables) {
-    if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) { over = true; break; }
-  }
-  if (over) { screenCanvas.style.cursor = 'pointer'; return; }
-
-  if (state.screen === 'code') {
-    const inputY = CODE_LAYOUT.taskY + CODE_LAYOUT.taskH;
-    const inputBottom = inputY + CODE_LAYOUT.inputH;
-    if (y >= inputY + CODE_LAYOUT.headerH && y <= inputBottom) {
-      screenCanvas.style.cursor = 'text';
-      return;
-    }
-  }
-  screenCanvas.style.cursor = 'default';
-});
-
-screenCanvas.addEventListener('click', (e) => {
+function handleOverlayTap(clientX, clientY) {
   if (!state.focused || state.passedOut || state.sleeping) return;
   const r = screenCanvas.getBoundingClientRect();
-  const x = ((e.clientX - r.left) / r.width) * SCR_W;
-  const y = ((e.clientY - r.top) / r.height) * SCR_H;
+  const x = ((clientX - r.left) / r.width) * SCR_W;
+  const y = ((clientY - r.top) / r.height) * SCR_H;
 
+  // проверяем кнопки
   for (const c of clickables) {
     if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
       handleAction(c.action);
@@ -1187,6 +1462,7 @@ screenCanvas.addEventListener('click', (e) => {
     }
   }
 
+  // тап по области кода — ставим курсор + фокусируем скрытый input
   if (state.screen === 'code' && !state.codeComplete) {
     const inputY = CODE_LAYOUT.taskY + CODE_LAYOUT.taskH;
     const inputBottom = inputY + CODE_LAYOUT.inputH;
@@ -1194,12 +1470,48 @@ screenCanvas.addEventListener('click', (e) => {
       state.codeCursor = getCursorIndexFromClick(x, y);
       needRedraw = true;
       drawScreen();
+
+      // Показываем мобильную клавиатуру
+      if (isTouch) {
+        try {
+          mobileInput.value = ' ';
+          mobileInput.focus();
+          setTimeout(() => {
+            try { mobileInput.setSelectionRange(1, 1); } catch(e) {}
+          }, 0);
+        } catch(e) {}
+      }
     }
   }
+}
+
+screenCanvas.addEventListener('click', (e) => {
+  handleOverlayTap(e.clientX, e.clientY);
 });
 
+// Мобильные тапы
+let overlayTouchStart = 0, overlayStartPt = null;
+screenCanvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    overlayTouchStart = performance.now();
+    overlayStartPt = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+}, { passive: true });
+
+screenCanvas.addEventListener('touchend', (e) => {
+  if (!overlayStartPt) return;
+  const dt = performance.now() - overlayTouchStart;
+  const t = e.changedTouches[0];
+  const moved = Math.hypot(t.clientX - overlayStartPt.x, t.clientY - overlayStartPt.y);
+  if (dt < 400 && moved < 12) {
+    handleOverlayTap(t.clientX, t.clientY);
+    e.preventDefault();
+  }
+  overlayStartPt = null;
+}, { passive: false });
+
 /* ============================================================
-   UI
+   UI HELPERS
    ============================================================ */
 let clickables = [];
 
@@ -1220,42 +1532,32 @@ function btn(x, y, w, h, label, action, color = '#2563eb', fs = 20, hover = true
   g.addColorStop(0, color);
   g.addColorStop(1, shade(color, -22));
   ctx.fillStyle = g;
-  rr(ctx, x, y, w, h, 10);
-  ctx.fill();
-
+  rr(ctx, x, y, w, h, 10); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.18)';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-
   ctx.fillStyle = '#ffffff';
   ctx.font = `700 ${fs}px system-ui, -apple-system, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(label, x + w / 2, y + h / 2 + 1);
   ctx.restore();
-
   if (hover) clickables.push({ x, y, w, h, action });
 }
 
 function smallBtn(x, y, w, h, label, action, color = '#334155') {
   ctx.save();
   const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, color);
-  g.addColorStop(1, shade(color, -25));
+  g.addColorStop(0, color); g.addColorStop(1, shade(color, -25));
   ctx.fillStyle = g;
-  rr(ctx, x, y, w, h, 7);
-  ctx.fill();
-
+  rr(ctx, x, y, w, h, 7); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.16)';
   ctx.lineWidth = 1;
   ctx.stroke();
-
   ctx.fillStyle = '#ffffff';
   ctx.font = '700 20px system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(label, x + w / 2, y + h / 2 + 1);
   ctx.restore();
-
   clickables.push({ x, y, w, h, action });
 }
 
@@ -1272,8 +1574,7 @@ function shade(hex, amt) {
 
 function bgFill() {
   const g = ctx.createLinearGradient(0, 0, 0, SCR_H);
-  g.addColorStop(0, '#0d1117');
-  g.addColorStop(1, '#070a0f');
+  g.addColorStop(0, '#0d1117'); g.addColorStop(1, '#070a0f');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, SCR_W, SCR_H);
 }
@@ -1283,7 +1584,6 @@ function topBar(title, backAction) {
   ctx.fillRect(0, 0, SCR_W, 54);
   ctx.fillStyle = 'rgba(96,165,250,.35)';
   ctx.fillRect(0, 54, SCR_W, 2);
-
   if (backAction) {
     ctx.fillStyle = 'rgba(255,255,255,.07)';
     rr(ctx, 16, 11, 84, 32, 8); ctx.fill();
@@ -1293,21 +1593,29 @@ function topBar(title, backAction) {
     ctx.fillText('← Назад', 58, 28);
     clickables.push({ x: 16, y: 11, w: 84, h: 32, action: backAction });
   }
-
   ctx.fillStyle = '#e6edf3';
   ctx.font = '700 19px system-ui, sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText(title, 118, 28);
-
   ctx.textAlign = 'right';
   ctx.fillStyle = '#7ee787';
   ctx.font = '700 17px system-ui, sans-serif';
   ctx.fillText('$' + Math.floor(state.money), SCR_W - 22, 28);
 }
 
+function hexA(hex, a) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substr(0, 2), 16);
+  const g = parseInt(c.substr(2, 2), 16);
+  const b = parseInt(c.substr(4, 2), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ============================================================
+   ПРИЛОЖЕНИЯ
+   ============================================================ */
 function drawDesktop() {
   bgFill();
-
   const g = ctx.createRadialGradient(SCR_W / 2, 300, 60, SCR_W / 2, 300, 700);
   g.addColorStop(0, 'rgba(59,130,246,.16)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1341,13 +1649,10 @@ function drawDesktop() {
     gg.addColorStop(0, hexA(ic.color, 0.30));
     gg.addColorStop(1, hexA(ic.color, 0.10));
     ctx.fillStyle = gg;
-    rr(ctx, ic.x - s / 2, y, s, s, 22);
-    ctx.fill();
-
+    rr(ctx, ic.x - s / 2, y, s, s, 22); ctx.fill();
     ctx.strokeStyle = hexA(ic.color, 0.75);
     ctx.lineWidth = 2.5;
-    rr(ctx, ic.x - s / 2, y, s, s, 22);
-    ctx.stroke();
+    rr(ctx, ic.x - s / 2, y, s, s, 22); ctx.stroke();
     ctx.restore();
 
     ctx.font = '62px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
@@ -1371,15 +1676,6 @@ function drawDesktop() {
   ctx.fillText('нажмите мимо ноутбука, чтобы отдохнуть', SCR_W / 2, SCR_H - 28);
 }
 
-function hexA(hex, a) {
-  const c = hex.replace('#', '');
-  const r = parseInt(c.substr(0, 2), 16);
-  const g = parseInt(c.substr(2, 2), 16);
-  const b = parseInt(c.substr(4, 2), 16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-/* ---- Подсветка синтаксиса ---- */
 const HL_KEYWORDS = ['const','let','var','function','return','if','else','for','while',
   'await','async','new','import','from','export','class','extends','null','true','false',
   'this','typeof','switch','case','break','default'];
@@ -1416,9 +1712,6 @@ function highlightCode(code) {
   return out;
 }
 
-/* ============================================================
-   ПРИЛОЖЕНИЕ "РАЗРАБОТКА"
-   ============================================================ */
 function findFirstError(typed, target) {
   const len = Math.min(typed.length, target.length);
   for (let i = 0; i < len; i++) if (typed[i] !== target[i]) return i;
@@ -1561,8 +1854,7 @@ function drawCodeApp() {
     } else {
       let line = 1, col = 1;
       for (let i = 0; i < errIdx; i++) {
-        if (target[i] === '\n') { line++; col = 1; }
-        else col++;
+        if (target[i] === '\n') { line++; col = 1; } else col++;
       }
       const expected = target[errIdx];
       const actual = typed[errIdx];
@@ -1571,22 +1863,11 @@ function drawCodeApp() {
       ctx.fillStyle = '#ff7b72';
       ctx.fillText(
         '✗  Ошибка: строка ' + line + ', символ ' + col +
-        ' — ожидалось ' + expStr + ', получено ' + actStr,
-        40, msgY
+        ' — ожидалось ' + expStr + ', получено ' + actStr, 40, msgY
       );
     }
   }
 }
-
-/* ============================================================
-   ПРИЛОЖЕНИЕ "ДОСТАВКА" — с количеством порций
-   ============================================================ */
-const FOOD_MENU = [
-  { name: 'Пицца Пепперони', price: 15, food: 40, time: 9,  emoji: '🍕' },
-  { name: 'Двойной Бургер',  price: 10, food: 28, time: 6,  emoji: '🍔' },
-  { name: 'Суши-сет',        price: 25, food: 55, time: 14, emoji: '🍣' },
-  { name: 'Шаурма XL',       price: 8,  food: 22, time: 5,  emoji: '🌯' },
-];
 
 function drawFoodApp() {
   bgFill();
@@ -1607,12 +1888,10 @@ function drawFoodApp() {
     ctx.lineWidth = 1.5;
     rr(ctx, 24, y, SCR_W - 48, h, 14); ctx.stroke();
 
-    // эмодзи
     ctx.font = '46px "Segoe UI Emoji","Apple Color Emoji",sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(item.emoji, 76, y + h / 2);
 
-    // название + инфо
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e6edf3';
     ctx.font = '700 19px system-ui, sans-serif';
@@ -1622,7 +1901,6 @@ function drawFoodApp() {
     ctx.font = '500 13px system-ui, sans-serif';
     ctx.fillText(`+${item.food} сытости · $${item.price}/порция · ~${item.time} сек`, 122, y + 60);
 
-    // виджет количества
     const qty = state.orderQty[i];
     const qY = y + h / 2 - 19;
     const minusX = 700;
@@ -1637,7 +1915,6 @@ function drawFoodApp() {
 
     smallBtn(minusX + 84, qY, 34, 38, '+', 'qtyPlus_' + i, '#3b4252');
 
-    // кнопка заказа
     const total = item.price * qty;
     const afford = state.money >= total;
     const busy = state.delivery !== null || state.foodOnDesk !== null;
@@ -1659,7 +1936,6 @@ function drawFoodApp() {
     }
   });
 
-  // Нижняя строка статуса
   if (state.delivery) {
     const p = 1 - state.delivery.t / state.delivery.total;
     ctx.fillStyle = 'rgba(37,99,235,.15)';
@@ -1668,7 +1944,6 @@ function drawFoodApp() {
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(`🛵 Курьер везёт: ${state.delivery.item.name} × ${state.delivery.qty}`, 42, SCR_H - 41);
-
     ctx.fillStyle = 'rgba(255,255,255,.08)';
     rr(ctx, SCR_W - 320, SCR_H - 50, 280, 18, 9); ctx.fill();
     ctx.fillStyle = '#3b82f6';
@@ -1680,15 +1955,12 @@ function drawFoodApp() {
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(
-      `✅ ${state.foodOnDesk.item.name} × ${state.foodOnDesk.count} на столе — клик по тарелке, чтобы съесть`,
+      `✅ ${state.foodOnDesk.item.name} × ${state.foodOnDesk.count} на столе — тап по тарелке, чтобы съесть`,
       42, SCR_H - 41
     );
   }
 }
 
-/* ============================================================
-   БАНК
-   ============================================================ */
 function drawBankApp() {
   bgFill();
   topBar('DevBank — личный кабинет', 'back');
@@ -1699,8 +1971,7 @@ function drawBankApp() {
   g.addColorStop(0.55, '#3b82f6');
   g.addColorStop(1, '#8b5cf6');
   ctx.fillStyle = g;
-  rr(ctx, 40, 84, 480, 260, 22);
-  ctx.fill();
+  rr(ctx, 40, 84, 480, 260, 22); ctx.fill();
 
   ctx.fillStyle = 'rgba(255,255,255,.16)';
   rr(ctx, 300, 110, 190, 130, 14); ctx.fill();
@@ -1743,7 +2014,6 @@ function drawBankApp() {
     ctx.font = '500 15px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(t.text, 62, y);
-
     ctx.textAlign = 'right';
     ctx.fillStyle = t.amount >= 0 ? '#7ee787' : '#ff7b72';
     ctx.font = '700 16px system-ui, sans-serif';
@@ -1765,88 +2035,50 @@ function drawScreen() {
 }
 
 /* ============================================================
-   МОДЕЛЬКИ ЕДЫ
+   МОДЕЛИ ЕДЫ
    ============================================================ */
 function createFoodModel(item) {
   const g = new THREE.Group();
 
   if (item.emoji === '🍕') {
-    // пицца
     const crustMat = new THREE.MeshStandardMaterial({ color: 0xd9a05b, roughness: 0.85 });
     const sauceMat = new THREE.MeshStandardMaterial({ color: 0xc44a2a, roughness: 0.7 });
     const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, roughness: 0.55 });
     const pepMat = new THREE.MeshStandardMaterial({ color: 0x8a1f1f, roughness: 0.6 });
 
-    const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.008, 24), crustMat);
+    const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.008, 20), crustMat);
     g.add(crust);
+    const sauce = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.004, 20), sauceMat);
+    sauce.position.y = 0.005; g.add(sauce);
+    const cheese = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.0025, 20), cheeseMat);
+    cheese.position.y = 0.008; g.add(cheese);
 
-    const sauce = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.004, 24), sauceMat);
-    sauce.position.y = 0.005;
-    g.add(sauce);
-
-    const cheese = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.0025, 24), cheeseMat);
-    cheese.position.y = 0.008;
-    g.add(cheese);
-
-    // пепперони
     for (let i = 0; i < 5; i++) {
       const a = i * (Math.PI * 2 / 5) + 0.3;
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.003, 12), pepMat);
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.003, 10), pepMat);
       p.position.set(Math.cos(a) * 0.02, 0.0105, Math.sin(a) * 0.02);
       g.add(p);
     }
-    // кусочки сыра
-    for (let i = 0; i < 5; i++) {
-      const c = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 6, 5), cheeseMat);
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * 0.028;
-      c.position.set(Math.cos(a) * r, 0.010, Math.sin(a) * r);
-      g.add(c);
-    }
   } else if (item.emoji === '🍔') {
-    // бургер
     const bunMat = new THREE.MeshStandardMaterial({ color: 0xc98a4b, roughness: 0.85 });
     const bunTopMat = new THREE.MeshStandardMaterial({ color: 0xd69657, roughness: 0.8 });
     const pattyMat = new THREE.MeshStandardMaterial({ color: 0x4a2410, roughness: 0.75 });
     const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, roughness: 0.5 });
     const lettuceMat = new THREE.MeshStandardMaterial({ color: 0x5aa82a, roughness: 0.8 });
 
-    const bottomBun = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.033, 0.018, 20), bunMat);
-    bottomBun.position.y = 0.009;
-    g.add(bottomBun);
-
-    const patty = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.014, 20), pattyMat);
-    patty.position.y = 0.025;
-    g.add(patty);
-
+    const bottomBun = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.033, 0.018, 16), bunMat);
+    bottomBun.position.y = 0.009; g.add(bottomBun);
+    const patty = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.014, 16), pattyMat);
+    patty.position.y = 0.025; g.add(patty);
     const cheese = new THREE.Mesh(new THREE.BoxGeometry(0.066, 0.003, 0.066), cheeseMat);
-    cheese.position.y = 0.0335;
-    g.add(cheese);
-
-    const lettuce = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.006, 6, 18), lettuceMat);
-    lettuce.rotation.x = Math.PI / 2;
-    lettuce.position.y = 0.039;
-    g.add(lettuce);
-
+    cheese.position.y = 0.0335; g.add(cheese);
+    const lettuce = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.006, 6, 14), lettuceMat);
+    lettuce.rotation.x = Math.PI / 2; lettuce.position.y = 0.039; g.add(lettuce);
     const topBun = new THREE.Mesh(
-      new THREE.SphereGeometry(0.038, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-      bunTopMat
+      new THREE.SphereGeometry(0.038, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), bunTopMat
     );
-    topBun.position.y = 0.042;
-    g.add(topBun);
-
-    // кунжут
-    const seedMat = new THREE.MeshStandardMaterial({ color: 0xfff4d0, roughness: 0.7 });
-    for (let i = 0; i < 5; i++) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(0.002, 6, 4), seedMat);
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * 0.025;
-      s.position.set(Math.cos(a) * r, 0.062 + Math.random() * 0.006, Math.sin(a) * r);
-      s.scale.y = 0.5;
-      g.add(s);
-    }
+    topBun.position.y = 0.042; g.add(topBun);
   } else if (item.emoji === '🍣') {
-    // суши — 3 ролла
     const riceMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e0, roughness: 0.75 });
     const noriMat = new THREE.MeshStandardMaterial({ color: 0x1a3a2a, roughness: 0.5 });
     const fillMat = new THREE.MeshStandardMaterial({ color: 0xe07a4a, roughness: 0.6 });
@@ -1854,86 +2086,51 @@ function createFoodModel(item) {
 
     for (let i = 0; i < 3; i++) {
       const roll = new THREE.Group();
-
-      const rice = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.016, 16), riceMat);
-      rice.rotation.x = Math.PI / 2;
-      roll.add(rice);
-
-      const nori = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 16), noriMat);
-      nori.rotation.x = Math.PI / 2;
-      roll.add(nori);
-
-      const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.017, 10), fillMat);
-      fill.rotation.x = Math.PI / 2;
-      roll.add(fill);
-
-      // полоска рыбы сверху
+      const rice = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.016, 12), riceMat);
+      rice.rotation.x = Math.PI / 2; roll.add(rice);
+      const nori = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 12), noriMat);
+      nori.rotation.x = Math.PI / 2; roll.add(nori);
+      const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.017, 8), fillMat);
+      fill.rotation.x = Math.PI / 2; roll.add(fill);
       const fish = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.003, 0.012), fishMat);
-      fish.position.y = 0.016;
-      roll.add(fish);
-
+      fish.position.y = 0.016; roll.add(fish);
       roll.position.set(-0.026 + i * 0.026, 0.018, (i === 1 ? -0.008 : 0.004));
       roll.rotation.y = (i - 1) * 0.2;
       g.add(roll);
     }
-  } else if (item.emoji === '🌯') {
-    // шаурма
+  } else {
     const wrapMat = new THREE.MeshStandardMaterial({ color: 0xe0c896, roughness: 0.85 });
     const paperMat = new THREE.MeshStandardMaterial({ color: 0xf2ead0, roughness: 0.92 });
     const fillMat = new THREE.MeshStandardMaterial({ color: 0xa8542a, roughness: 0.75 });
     const vegMat = new THREE.MeshStandardMaterial({ color: 0x6aa830, roughness: 0.8 });
 
-    // основная лепёшка
-    const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.078, 18), wrapMat);
+    const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.078, 14), wrapMat);
     wrap.rotation.z = Math.PI / 2 - 0.28;
     wrap.rotation.y = 0.5;
     wrap.position.y = 0.028;
     g.add(wrap);
-
-    // начинка торчит сверху
-    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 14), fillMat);
+    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 10), fillMat);
     fill.rotation.copy(wrap.rotation);
     fill.position.copy(wrap.position);
     fill.translateY(0.043);
     g.add(fill);
-
-    // листик салата
     const veg = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.004, 0.02), vegMat);
     veg.rotation.copy(wrap.rotation);
     veg.position.copy(wrap.position);
     veg.translateY(0.052);
     g.add(veg);
-
-    // бумажная обёртка снизу
-    const paper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.027, 0.038, 18), paperMat);
+    const paper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.027, 0.038, 14), paperMat);
     paper.rotation.copy(wrap.rotation);
     paper.position.copy(wrap.position);
     paper.translateY(-0.033);
     g.add(paper);
-  } else {
-    // запасной вариант
-    const blob = new THREE.Mesh(
-      new THREE.SphereGeometry(0.03, 16, 12),
-      new THREE.MeshStandardMaterial({ color: 0xd98a3a, roughness: 0.7 })
-    );
-    blob.scale.y = 0.6;
-    blob.position.y = 0.02;
-    g.add(blob);
   }
 
-  g.traverse(o => {
-    if (o.isMesh) {
-      o.castShadow = true;
-      o.userData.type = 'food';
-    }
-  });
+  g.traverse(o => { if (o.isMesh) o.userData.type = 'food'; });
   g.userData.type = 'food';
   return g;
 }
 
-/* ============================================================
-   ЕДА НА СТОЛЕ (стопка порций)
-   ============================================================ */
 let foodMesh = null;
 
 function rebuildFoodMesh() {
@@ -1957,42 +2154,22 @@ function rebuildFoodMesh() {
     const unit = new THREE.Group();
     unit.position.y = i * 0.014;
 
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.082, 0.014, 32), plateMat);
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.082, 0.014, 24), plateMat);
     plate.position.y = 0.007;
-    plate.castShadow = true;
     plate.userData.type = 'food';
     unit.add(plate);
 
-    const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.004, 32), innerMat);
+    const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.004, 24), innerMat);
     inner.position.y = 0.015;
     inner.userData.type = 'food';
     unit.add(inner);
 
-    // еда только на верхней тарелке
     if (i === count - 1) {
       const foodModel = createFoodModel(item);
       foodModel.position.y = 0.017;
       unit.add(foodModel);
     }
-
     g.add(unit);
-  }
-
-  // пар над верхней порцией
-  const steamMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.06, depthWrite: false
-  });
-  for (let i = 0; i < 3; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), steamMat.clone());
-    s.position.set(
-      (Math.random() - 0.5) * 0.04,
-      0.085 + i * 0.02,
-      (Math.random() - 0.5) * 0.04
-    );
-    s.userData.steam = true;
-    s.userData.phase = Math.random() * Math.PI * 2;
-    s.userData.baseY = s.position.y;
-    g.add(s);
   }
 
   scene.add(g);
@@ -2000,7 +2177,7 @@ function rebuildFoodMesh() {
 }
 
 /* ============================================================
-   RAYCAST
+   RAYCAST И УПРАВЛЕНИЕ
    ============================================================ */
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -2019,26 +2196,16 @@ let lookYaw = 0, lookPitch = 0;
 let targetYaw = 0, targetPitch = 0;
 const BASE_PITCH = -0.34;
 
-function onPointerMove(e) {
-  if (state.focused || state.sleeping) return;
+// Ограничения для тач-свайпа
+const YAW_LIMIT = 0.95;
+const PITCH_LIMIT = 0.55;
 
-  const nx = e.clientX / innerWidth;
-  const ny = e.clientY / innerHeight;
-
-  pointer.x = nx * 2 - 1;
-  pointer.y = -(ny * 2 - 1);
-
-  targetYaw = -(nx - 0.5) * 0.95;
-  targetPitch = -(ny - 0.5) * 0.62;
-
-  updateHover();
-}
-
-function updateHover() {
+function updateHover(clientX, clientY) {
   if (state.passedOut || state.focused || state.sleeping) {
     renderer.domElement.style.cursor = 'default'; return;
   }
-
+  pointer.x = (clientX / innerWidth) * 2 - 1;
+  pointer.y = -((clientY / innerHeight) * 2 - 1);
   raycaster.setFromCamera(pointer, camera);
 
   const laptopHits = raycaster.intersectObject(laptop, true);
@@ -2047,13 +2214,13 @@ function updateHover() {
   const list = foodMesh ? interactables.concat([foodMesh]) : interactables;
   const hits = raycaster.intersectObjects(list, true);
   if (hits.length) { renderer.domElement.style.cursor = 'pointer'; return; }
-
   renderer.domElement.style.cursor = 'default';
 }
 
-function onClick(e) {
+function handleWorldTap(clientX, clientY) {
   if (state.passedOut || state.focused || state.sleeping) return;
-
+  pointer.x = (clientX / innerWidth) * 2 - 1;
+  pointer.y = -((clientY / innerHeight) * 2 - 1);
   raycaster.setFromCamera(pointer, camera);
 
   const laptopHits = raycaster.intersectObject(laptop, true);
@@ -2067,6 +2234,90 @@ function onClick(e) {
     if (info.type === 'mug') drinkCoffee();
     else if (info.type === 'food') eatFood();
   }
+}
+
+/* ---- Мышь ---- */
+function onPointerMove(e) {
+  if (state.focused || state.sleeping) return;
+  if (e.pointerType === 'touch') return;
+
+  const nx = e.clientX / innerWidth;
+  const ny = e.clientY / innerHeight;
+
+  targetYaw = -(nx - 0.5) * 0.95;
+  targetPitch = -(ny - 0.5) * 0.62;
+
+  updateHover(e.clientX, e.clientY);
+}
+
+function onCanvasClick(e) {
+  if (e.pointerType === 'touch') return;   // тач обрабатывается отдельно
+  handleWorldTap(e.clientX, e.clientY);
+}
+
+/* ---- Тач: свайп = поворот, тап = взаимодействие ---- */
+let touchStartPt = null;
+let touchStartTime = 0;
+let lastTouchPos = null;
+let touchDragging = false;
+
+function onTouchStart(e) {
+  if (state.focused || state.sleeping) return;
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  touchStartPt = { x: t.clientX, y: t.clientY };
+  lastTouchPos = { x: t.clientX, y: t.clientY };
+  touchStartTime = performance.now();
+  touchDragging = false;
+}
+
+function onTouchMove(e) {
+  if (state.focused || state.sleeping) return;
+  if (e.touches.length !== 1 || !lastTouchPos) return;
+  const t = e.touches[0];
+  const dx = t.clientX - lastTouchPos.x;
+  const dy = t.clientY - lastTouchPos.y;
+
+  const totalDx = t.clientX - touchStartPt.x;
+  const totalDy = t.clientY - touchStartPt.y;
+  if (Math.hypot(totalDx, totalDy) > 10) touchDragging = true;
+
+  if (touchDragging) {
+    targetYaw -= dx * 0.0075;
+    targetPitch -= dy * 0.0075;
+    targetYaw = Math.max(-YAW_LIMIT, Math.min(YAW_LIMIT, targetYaw));
+    targetPitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, targetPitch));
+  }
+  lastTouchPos = { x: t.clientX, y: t.clientY };
+  e.preventDefault();
+}
+
+function onTouchEnd(e) {
+  if (state.focused || state.sleeping) { touchStartPt = null; return; }
+  const dt = performance.now() - touchStartTime;
+  const t = e.changedTouches[0];
+  const moved = touchStartPt
+    ? Math.hypot(t.clientX - touchStartPt.x, t.clientY - touchStartPt.y)
+    : 999;
+
+  if (!touchDragging && dt < 350 && moved < 14) {
+    handleWorldTap(t.clientX, t.clientY);
+  }
+  touchStartPt = null;
+  lastTouchPos = null;
+  touchDragging = false;
+}
+
+renderer.domElement.addEventListener('pointermove', onPointerMove);
+renderer.domElement.addEventListener('click', onCanvasClick);
+
+if (isTouch) {
+  renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+  renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+  renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: true });
+  renderer.domElement.addEventListener('touchcancel', () => {
+    touchStartPt = null; lastTouchPos = null; touchDragging = false;
+  });
 }
 
 /* ============================================================
@@ -2086,16 +2337,13 @@ function handleAction(action) {
   if (action.startsWith('qtyMinus_')) {
     const idx = parseInt(action.split('_')[1]);
     state.orderQty[idx] = Math.max(1, state.orderQty[idx] - 1);
-    needRedraw = true;
-    return;
+    needRedraw = true; return;
   }
   if (action.startsWith('qtyPlus_')) {
     const idx = parseInt(action.split('_')[1]);
     state.orderQty[idx] = Math.min(9, state.orderQty[idx] + 1);
-    needRedraw = true;
-    return;
+    needRedraw = true; return;
   }
-
   if (action.startsWith('order_')) {
     const idx = parseInt(action.split('_')[1]);
     const item = FOOD_MENU[idx];
@@ -2113,32 +2361,27 @@ function handleAction(action) {
     state.orderQty[idx] = 1;
     toast(`🛵 Заказ оформлен: ${item.name} × ${qty}`, '#60a5fa');
     needRedraw = true;
-    return;
+    saveProgress(true);
   }
 }
 
 /* ============================================================
-   КОФЕ
+   КОФЕ, СОН, ЕДА
    ============================================================ */
 let drinkAnim = 0;
 
 function drinkCoffee() {
   if (state.passedOut || state.sleeping) return;
-
   state.energy = Math.min(130, state.energy + 22);
   state.caffeine += 27;
-
   drinkAnim = 1;
 
-  if (state.caffeine >= 200) {
-    passOut();
-  } else if (state.caffeine > 156) {
-    toast('⚠️ Передозировка кофеина... ещё чуть-чуть и всё', '#f59e0b');
-  } else if (state.caffeine > 100) {
-    toast('☕ Кофеин за 100%! Сердце частит', '#f59e0b');
-  } else {
-    toast('☕ Глоток кофе. Бодрость +22', '#a78bfa');
-  }
+  if (state.caffeine >= 200) passOut();
+  else if (state.caffeine > 156) toast('⚠️ Передозировка кофеина...', '#f59e0b');
+  else if (state.caffeine > 100) toast('☕ Кофеин за 100%! Сердце частит', '#f59e0b');
+  else toast('☕ Глоток кофе. Бодрость +22', '#a78bfa');
+
+  saveProgress(true);
 }
 
 function eatFood() {
@@ -2146,7 +2389,6 @@ function eatFood() {
   if (state.passedOut || state.sleeping) return;
 
   const { item, count } = state.foodOnDesk;
-
   state.hunger = Math.min(100, state.hunger + item.food);
   state.energy = Math.min(130, state.energy + 6);
 
@@ -2160,9 +2402,9 @@ function eatFood() {
   }
   rebuildFoodMesh();
   needRedraw = true;
+  saveProgress(true);
 }
 
-/* ---- Обморок ---- */
 const fadeEl = document.getElementById('fade');
 const fadeTxt = document.getElementById('fadeTxt');
 
@@ -2171,6 +2413,7 @@ function passOut() {
   state.passedOut = true;
   state.caffeine = 200;
   setFocused(false);
+  saveProgress(true);
 
   fadeTxt.textContent = 'СЛИШКОМ МНОГО КОФЕИНА...';
   fadeEl.style.opacity = '1';
@@ -2190,13 +2433,11 @@ function passOut() {
     state.passedOut = false;
     fadeTxt.style.opacity = '0';
     fadeEl.style.opacity = '0';
-    toast('Пробуждение. Голова гудит. Больше так не делай.', '#ff7b72');
+    toast('Пробуждение. Голова гудит.', '#ff7b72');
+    saveProgress(true);
   }, 4600);
 }
 
-/* ============================================================
-   СОН
-   ============================================================ */
 function startSleep() {
   if (state.sleeping || state.passedOut) return;
   state.sleeping = true;
@@ -2222,13 +2463,17 @@ function startSleep() {
     setTimeout(() => {
       state.sleeping = false;
       toast('☀️ Проснулся. +8 часов', '#7ee787');
+      saveProgress(true);
     }, 1600);
   }, 4200);
 }
 
 sleepBtn.addEventListener('click', startSleep);
+sleepBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  startSleep();
+}, { passive: false });
 
-/* ---- Тосты ---- */
 function toast(msg, color = '#7ee787') {
   const el = document.createElement('div');
   el.className = 'toast';
@@ -2241,7 +2486,6 @@ function toast(msg, color = '#7ee787') {
   setTimeout(() => el.remove(), 3000);
 }
 
-/* ---- Хинты ---- */
 const hintEl = document.getElementById('hint');
 let hintTimer = 0;
 const LAZY_MSG = [
@@ -2258,7 +2502,7 @@ function showHint(msg) {
 }
 
 /* ============================================================
-   КЛАВИАТУРА + ВВОД
+   ВВОД КОДА
    ============================================================ */
 const CHAR_ENERGY_COST = 0.35;
 
@@ -2289,9 +2533,64 @@ function deleteAtCursor() {
   needRedraw = true; drawScreen();
 }
 
+/* ---- Мобильный ввод через скрытый textarea ---- */
+mobileInput.value = ' ';
+mobileInput.addEventListener('input', () => {
+  const val = mobileInput.value;
+  if (val.length > 1) {
+    for (let i = 1; i < val.length; i++) {
+      const ch = val[i];
+      if (ch === '\n') {
+        if (state.codeTyped.length < state.codeTarget.length) insertChar('\n');
+      } else {
+        insertChar(ch);
+      }
+    }
+    mobileInput.value = ' ';
+  } else if (val.length === 0) {
+    backspaceAtCursor();
+    mobileInput.value = ' ';
+  }
+  // Сброс каретки
+  setTimeout(() => {
+    try { mobileInput.setSelectionRange(1, 1); } catch (e) {}
+  }, 0);
+});
+
+// Перехват Enter для мобильного textarea
+mobileInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (state.codeTyped.length < state.codeTarget.length) insertChar('\n');
+    mobileInput.value = ' ';
+    setTimeout(() => {
+      try { mobileInput.setSelectionRange(1, 1); } catch (err) {}
+    }, 0);
+  } else if (e.key === 'Backspace') {
+    // Если поле непустое (мы держим ' '), обычная обработка input сработает.
+    // Но если пользователь быстро нажимает и input не срабатывает — вызываем вручную.
+    if (mobileInput.value.length <= 1) {
+      e.preventDefault();
+      backspaceAtCursor();
+      mobileInput.value = ' ';
+      setTimeout(() => {
+        try { mobileInput.setSelectionRange(1, 1); } catch (err) {}
+      }, 0);
+    }
+  } else if (e.key === 'Escape') {
+    mobileInput.blur();
+  }
+});
+
+/* ---- Глобальная клавиатура (десктоп) ---- */
 addEventListener('keydown', e => {
   if (state.sleeping) return;
-  if (e.key === 'Escape' && state.focused) { setFocused(false); return; }
+  if (e.target === mobileInput) return;
+
+  if (e.key === 'Escape') {
+    if (settingsModal.classList.contains('show')) { closeSettings(); return; }
+    if (state.focused) { setFocused(false); return; }
+  }
 
   const isCodeApp = state.focused && state.screen === 'code' && !state.passedOut && !state.codeComplete;
 
@@ -2318,37 +2617,33 @@ addEventListener('keydown', e => {
       state.codeCursor = Math.min(state.codeTyped.length, state.codeCursor + 1);
       needRedraw = true; drawScreen(); return;
     }
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
       const typed = state.codeTyped, cur = state.codeCursor;
       let lineStart = cur;
       while (lineStart > 0 && typed[lineStart - 1] !== '\n') lineStart--;
-      if (lineStart === 0) state.codeCursor = 0;
-      else {
-        const prevLineEnd = lineStart - 1;
-        let prevLineStart = prevLineEnd;
-        while (prevLineStart > 0 && typed[prevLineStart - 1] !== '\n') prevLineStart--;
-        const col = cur - lineStart;
-        const prevLen = prevLineEnd - prevLineStart;
-        state.codeCursor = prevLineStart + Math.min(col, prevLen);
-      }
-      needRedraw = true; drawScreen(); return;
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const typed = state.codeTyped, cur = state.codeCursor;
-      let lineStart = cur;
-      while (lineStart > 0 && typed[lineStart - 1] !== '\n') lineStart--;
-      let lineEnd = cur;
-      while (lineEnd < typed.length && typed[lineEnd] !== '\n') lineEnd++;
-      if (lineEnd >= typed.length) state.codeCursor = typed.length;
-      else {
-        const nextLineStart = lineEnd + 1;
-        let nextLineEnd = nextLineStart;
-        while (nextLineEnd < typed.length && typed[nextLineEnd] !== '\n') nextLineEnd++;
-        const col = cur - lineStart;
-        const nextLen = nextLineEnd - nextLineStart;
-        state.codeCursor = nextLineStart + Math.min(col, nextLen);
+      if (e.key === 'ArrowUp') {
+        if (lineStart === 0) state.codeCursor = 0;
+        else {
+          const prevLineEnd = lineStart - 1;
+          let prevLineStart = prevLineEnd;
+          while (prevLineStart > 0 && typed[prevLineStart - 1] !== '\n') prevLineStart--;
+          const col = cur - lineStart;
+          const prevLen = prevLineEnd - prevLineStart;
+          state.codeCursor = prevLineStart + Math.min(col, prevLen);
+        }
+      } else {
+        let lineEnd = cur;
+        while (lineEnd < typed.length && typed[lineEnd] !== '\n') lineEnd++;
+        if (lineEnd >= typed.length) state.codeCursor = typed.length;
+        else {
+          const nextLineStart = lineEnd + 1;
+          let nextLineEnd = nextLineStart;
+          while (nextLineEnd < typed.length && typed[nextLineEnd] !== '\n') nextLineEnd++;
+          const col = cur - lineStart;
+          const nextLen = nextLineEnd - nextLineStart;
+          state.codeCursor = nextLineStart + Math.min(col, nextLen);
+        }
       }
       needRedraw = true; drawScreen(); return;
     }
@@ -2377,7 +2672,7 @@ addEventListener('keydown', e => {
   }
 
   const k = e.key.toLowerCase();
-  if (['w','a','s','d','ц','ф','ы','в','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) {
+  if (['w','a','s','d','ц','ф','ы','в'].includes(k)) {
     if (state.passedOut) return;
     showHint(LAZY_MSG[Math.floor(Math.random() * LAZY_MSG.length)]);
   }
@@ -2421,10 +2716,8 @@ function updateTimeLighting() {
 
   windowLight.color.setHex(lerpColor(k0.wc, k1.wc, t));
   windowLight.intensity = k0.wi + (k1.wi - k0.wi) * t;
-
   winGlassMat.emissive.setHex(lerpColor(k0.se, k1.se, t));
   winGlassMat.emissiveIntensity = k0.sei + (k1.sei - k0.sei) * t;
-
   roomLight.intensity = k0.ri + (k1.ri - k0.ri) * t;
 
   const dayFactor = Math.max(0, Math.sin((h - 5) / 14 * Math.PI));
@@ -2433,7 +2726,7 @@ function updateTimeLighting() {
 }
 
 /* ============================================================
-   ДОСТИЖЕНИЯ — ЛОГИКА
+   ДОСТИЖЕНИЯ
    ============================================================ */
 function checkAchievements() {
   ACHIEVEMENTS.forEach((a, i) => {
@@ -2441,15 +2734,123 @@ function checkAchievements() {
       state.achievements[i] = true;
       unlockAchievementMesh(i);
       showAchievementBanner(a);
+      saveProgress(true);
     }
   });
 }
+
+/* ============================================================
+   НАСТРОЙКИ
+   ============================================================ */
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const modalToastEl = document.getElementById('modalToast');
+const msBalance = document.getElementById('msBalance');
+const msTasks = document.getElementById('msTasks');
+const msAchievements = document.getElementById('msAchievements');
+const msSaved = document.getElementById('msSaved');
+
+function formatSavedTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+function refreshModalStats() {
+  msBalance.textContent = '$' + Math.floor(state.money);
+  msTasks.textContent = String(state.completedTasks);
+  const achCount = state.achievements.filter(Boolean).length;
+  msAchievements.textContent = `${achCount} / ${ACHIEVEMENTS.length}`;
+  msSaved.textContent = lastSavedAt ? formatSavedTime(lastSavedAt) : '—';
+}
+
+function showModalToast(text, kind) {
+  modalToastEl.innerHTML = '';
+  const el = document.createElement('div');
+  el.className = 'toastInline ' + (kind === 'warn' ? 'toastWarn' : 'toastOk');
+  el.textContent = text;
+  modalToastEl.appendChild(el);
+  setTimeout(() => { if (modalToastEl.contains(el)) el.remove(); }, 2800);
+}
+
+function openSettings() {
+  refreshModalStats();
+  modalToastEl.innerHTML = '';
+  settingsModal.classList.add('show');
+}
+
+function closeSettings() { settingsModal.classList.remove('show'); }
+
+settingsBtn.addEventListener('click', openSettings);
+document.getElementById('closeBtn').addEventListener('click', closeSettings);
+
+settingsModal.addEventListener('click', (e) => {
+  if (e.target === settingsModal) closeSettings();
+});
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const ok = saveProgress(false);
+  if (ok) {
+    refreshModalStats();
+    showModalToast('✓ Прогресс сохранён!', 'ok');
+    toast('💾 Прогресс сохранён', '#7ee787');
+  } else {
+    showModalToast('✗ Не удалось сохранить', 'warn');
+  }
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  const btn = document.getElementById('clearBtn');
+  if (btn.dataset.confirm !== '1') {
+    btn.dataset.confirm = '1';
+    btn.innerHTML = '<span class="ic">⚠</span>Нажмите ещё раз';
+    showModalToast('Это действие необратимо!', 'warn');
+    setTimeout(() => {
+      if (btn.dataset.confirm === '1') {
+        btn.dataset.confirm = '';
+        btn.innerHTML = '<span class="ic">🗑</span>Очистить прогресс';
+      }
+    }, 4000);
+    return;
+  }
+  btn.dataset.confirm = '';
+  btn.innerHTML = '<span class="ic">🗑</span>Очистить прогресс';
+
+  clearProgress();
+  state.money = 120; state.energy = 100; state.hunger = 100;
+  state.caffeine = 0; state.clock = 9 * 60;
+  state.completedTasks = 0;
+  state.achievements = [false, false, false, false, false];
+  state.orderQty = [1, 1, 1, 1];
+  state.transactions = [{ text: 'Стартовый капитал', amount: 120 }];
+  state.foodOnDesk = null;
+  state.delivery = null;
+  if (foodMesh) {
+    scene.remove(foodMesh);
+    foodMesh.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    foodMesh = null;
+  }
+  achievementMeshes.forEach((m) => {
+    drawAchievementCanvas(m.cctx, m.ach, false);
+    m.tex.needsUpdate = true;
+  });
+  lastSavedAt = 0;
+  refreshModalStats();
+  showModalToast('✓ Прогресс очищен', 'ok');
+  toast('🗑 Прогресс очищен', '#ff7b72');
+  needRedraw = true;
+});
 
 /* ============================================================
    ГЛАВНЫЙ ЦИКЛ
    ============================================================ */
 const clock = new THREE.Clock();
 let redrawAcc = 0;
+let autoSaveAcc = 0;
+let hudAcc = 0;
 
 function nextTask() {
   state.codeTaskIdx++;
@@ -2492,13 +2893,13 @@ function update(dt) {
       fadeEl.style.opacity = '0';
       camera.rotation.z = 0;
       toast('Проснулся. Надо поесть...', '#f59e0b');
+      saveProgress(true);
     }, 4200);
   }
 
   state.clock += dt * 1.0;
   updateTimeLighting();
 
-  // Проверка завершения задания
   if (!state.codeComplete &&
       state.codeTyped.length === state.codeTarget.length &&
       state.codeTyped === state.codeTarget) {
@@ -2511,6 +2912,7 @@ function update(dt) {
     toast(`✅ Код скомпилирован! +$${reward}`, '#7ee787');
     checkAchievements();
     needRedraw = true;
+    saveProgress(true);
   }
   if (state.codeComplete) {
     state.codeCompleteT += dt;
@@ -2536,7 +2938,6 @@ function update(dt) {
     }
   }
 
-  // Доставка
   if (state.delivery) {
     state.delivery.t -= dt;
     if (state.delivery.t <= 0) {
@@ -2545,13 +2946,12 @@ function update(dt) {
       toast(`📦 Курьер доставил: ${state.delivery.item.name} × ${state.delivery.qty}!`, '#7ee787');
       state.delivery = null;
       needRedraw = true;
+      saveProgress(true);
     } else needRedraw = true;
   }
 
   coffee.position.y = 0.088;
   foam.position.y = 0.0885;
-  coffee.visible = true;
-  foam.visible = true;
 
   if (foodMesh) {
     foodMesh.children.forEach(c => {
@@ -2597,7 +2997,18 @@ function update(dt) {
     if (hintTimer <= 0) hintEl.classList.remove('show');
   }
 
-  updateHUD();
+  autoSaveAcc += dt;
+  if (autoSaveAcc >= 30) {
+    autoSaveAcc = 0;
+    saveProgress(true);
+  }
+
+  // HUD обновляем реже — экономим
+  hudAcc += dt;
+  if (hudAcc >= 0.1) {
+    hudAcc = 0;
+    updateHUD();
+  }
 }
 
 function updateHUD() {
@@ -2616,9 +3027,7 @@ function updateHUD() {
 
   if (!state.focused && !state.sleeping && !state.passedOut && state.energy < 130) {
     eBar.classList.add('resting');
-  } else {
-    eBar.classList.remove('resting');
-  }
+  } else eBar.classList.remove('resting');
 
   const h = Math.round(state.hunger);
   document.getElementById('hungerBar').style.width = h + '%';
@@ -2661,7 +3070,9 @@ function animate() {
   update(dt);
 
   redrawAcc += dt;
-  if (needRedraw || redrawAcc > 0.085) {
+  // На мобилке перерисовываем реже
+  const redrawInterval = isMobile ? 0.12 : 0.085;
+  if (needRedraw || redrawAcc > redrawInterval) {
     redrawAcc = 0;
     needRedraw = false;
     if (!state.passedOut) drawScreen();
@@ -2673,15 +3084,40 @@ function animate() {
 /* ============================================================
    СОБЫТИЯ
    ============================================================ */
+let resizeTimeout = null;
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   if (state.focused) layoutOverlay();
 });
+addEventListener('orientationchange', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    if (state.focused) layoutOverlay();
+  }, 200);
+});
 
-renderer.domElement.addEventListener('pointermove', onPointerMove);
-renderer.domElement.addEventListener('click', onClick);
+addEventListener('beforeunload', () => saveProgress(true));
+addEventListener('visibilitychange', () => {
+  if (document.hidden) saveProgress(true);
+});
+
+// Запрет двойного тапа (zoom)
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+// Запрет pinch-zoom
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('gestureend', e => e.preventDefault());
 
 setTimeout(() => {
   const intro = document.getElementById('intro');
@@ -2692,8 +3128,16 @@ setTimeout(() => {
 /* ============================================================
    СТАРТ
    ============================================================ */
+const loaded = loadProgress();
+if (state.foodOnDesk) rebuildFoodMesh();
 drawScreen();
+updateHUD();
 animate();
+
+setTimeout(() => {
+  if (loaded) toast('💾 Прогресс загружен', '#60a5fa');
+  else toast(isTouch ? 'Тапните по ноутбуку → свайп для обзора' : 'Новая игра. Удачи!', '#7ee787');
+}, 6500);
 </script>
 </body>
 </html>
