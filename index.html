@@ -11,7 +11,6 @@
     user-select:none;-webkit-user-select:none}
   canvas{display:block}
 
-  /* ---------- ЕДИНАЯ ШАПКА-ПОЛОСКА (z-index выше оверлея) ---------- */
   #hud{
     position:fixed;left:50%;top:14px;transform:translateX(-50%);
     z-index:50;pointer-events:none;
@@ -38,20 +37,17 @@
   #caffeineBar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);width:0%}
   #timeVal{color:#c9d1d9;font-weight:700;min-width:auto}
 
-  /* Энергия "отдыхает" — мягкое свечение */
   .fill.resting{animation:energyRest 1.4s ease-in-out infinite}
   @keyframes energyRest{
     0%,100%{box-shadow:0 0 0 0 rgba(126,231,135,0)}
     50%{box-shadow:0 0 8px 2px rgba(126,231,135,.75)}
   }
-  /* Кофеин перенаполнен — пульсация */
   .fill.overflowing{animation:cafPulse .8s ease-in-out infinite}
   @keyframes cafPulse{
     0%,100%{filter:brightness(1)}
     50%{filter:brightness(1.7)}
   }
 
-  /* ---------- Кнопка сна ---------- */
   #sleepBtn{
     position:fixed;left:50%;bottom:96px;
     transform:translateX(-50%) translateY(24px) scale(.94);
@@ -76,7 +72,6 @@
   }
   #sleepBtn .ic{font-size:17px;margin-right:8px}
 
-  /* ---------- Веки (закрытие глаз при сне) ---------- */
   #eyelidTop,#eyelidBottom{
     position:fixed;left:0;right:0;height:0;background:#000;
     z-index:62;pointer-events:none;
@@ -84,6 +79,52 @@
   }
   #eyelidTop{top:0}
   #eyelidBottom{bottom:0}
+
+  /* ---------- Баннер достижения ---------- */
+  .achvBanner {
+    position: fixed;
+    top: 90px; left: 50%;
+    transform: translateX(-50%) translateY(-40px) scale(.88);
+    display: flex; gap: 18px; align-items: center;
+    background: linear-gradient(135deg, rgba(20,26,42,.98), rgba(30,20,50,.98));
+    border: 2px solid #ffd700;
+    border-radius: 18px;
+    padding: 18px 28px;
+    box-shadow: 0 0 70px rgba(255,215,0,.55), 0 24px 70px rgba(0,0,0,.85);
+    z-index: 68;
+    opacity: 0;
+    transition: opacity .5s cubic-bezier(.3,1.3,.5,1),
+                transform .5s cubic-bezier(.3,1.3,.5,1);
+    pointer-events: none;
+    font-family: inherit;
+  }
+  .achvBanner.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  .achvIcon {
+    font-size: 54px;
+    filter: drop-shadow(0 0 16px rgba(255,215,0,.9));
+    animation: achvIconSpin 1.4s ease;
+  }
+  @keyframes achvIconSpin {
+    0% { transform: rotate(-25deg) scale(.5); }
+    60% { transform: rotate(12deg) scale(1.15); }
+    100% { transform: rotate(0) scale(1); }
+  }
+  .achvInfo { display: flex; flex-direction: column; }
+  .achvLbl {
+    font-size: 11px; letter-spacing: 4px; color: #ffd700;
+    font-weight: 800; text-transform: uppercase; margin-bottom: 3px;
+  }
+  .achvTitle {
+    font-size: 24px; font-weight: 800; color: #fff;
+    letter-spacing: 1px;
+  }
+  .achvDesc {
+    font-size: 13px; color: #a0aec0;
+    margin-top: 4px;
+  }
 
   #toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;
     align-items:flex-end;gap:10px;z-index:60;pointer-events:none}
@@ -251,7 +292,6 @@ roomLight.shadow.mapSize.set(1024, 1024);
 roomLight.shadow.bias = -0.0018;
 scene.add(roomLight);
 
-// Свет из окна — будет менять цвет и интенсивность по времени суток
 const windowLight = new THREE.PointLight(0x5b8fd6, 3.2, 9, 2);
 windowLight.position.set(-2.4, 1.9, -1.2);
 scene.add(windowLight);
@@ -309,7 +349,6 @@ const winGlassMat = new THREE.MeshStandardMaterial({
 const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.25), winGlassMat);
 windowGroup.add(winGlass);
 
-// огоньки города (собираем в массив, чтобы менять прозрачность)
 const cityDots = [];
 for (let i = 0; i < 42; i++) {
   const w = 0.02 + Math.random() * 0.05;
@@ -363,6 +402,150 @@ const poster = new THREE.Mesh(
 );
 poster.position.set(-1.65, 1.85, -3.98);
 room.add(poster);
+
+/* ============================================================
+   ДОСТИЖЕНИЯ — РАМКИ НА СТЕНЕ
+   ============================================================ */
+const ACHIEVEMENTS = [
+  { count: 10,  title: 'Новичок',  icon: '🌱', color: '#7ee787' },
+  { count: 50,  title: 'Стажёр',   icon: '📗', color: '#60a5fa' },
+  { count: 100, title: 'Джуниор',  icon: '💼', color: '#a78bfa' },
+  { count: 200, title: 'Мидл',     icon: '🚀', color: '#f59e0b' },
+  { count: 500, title: 'Сеньор',   icon: '👑', color: '#ffd700' }
+];
+
+const achievementMeshes = [];
+
+function drawAchievementCanvas(c, ach, unlocked) {
+  const w = c.canvas.width, h = c.canvas.height;
+  if (unlocked) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#1e2840');
+    g.addColorStop(1, '#14182a');
+    c.fillStyle = g;
+  } else {
+    c.fillStyle = '#0a0d14';
+  }
+  c.fillRect(0, 0, w, h);
+
+  // рамка
+  c.strokeStyle = unlocked ? '#ffd700' : '#2a3040';
+  c.lineWidth = 8;
+  c.strokeRect(10, 10, w - 20, h - 20);
+
+  if (unlocked) {
+    // декоративные уголки
+    c.strokeStyle = ach.color || '#ffd700';
+    c.lineWidth = 3;
+    const m = 22, L = 26;
+    c.beginPath(); c.moveTo(m, m + L); c.lineTo(m, m); c.lineTo(m + L, m); c.stroke();
+    c.beginPath(); c.moveTo(w - m - L, m); c.lineTo(w - m, m); c.lineTo(w - m, m + L); c.stroke();
+    c.beginPath(); c.moveTo(m, h - m - L); c.lineTo(m, h - m); c.lineTo(m + L, h - m); c.stroke();
+    c.beginPath(); c.moveTo(w - m - L, h - m); c.lineTo(w - m, h - m); c.lineTo(w - m, h - m - L); c.stroke();
+
+    // иконка
+    c.font = '80px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(ach.icon, w / 2, h * 0.34);
+
+    // название
+    c.fillStyle = '#ffd700';
+    c.font = 'bold 26px system-ui, sans-serif';
+    c.fillText(ach.title, w / 2, h * 0.62);
+
+    // количество
+    c.fillStyle = '#e6edf3';
+    c.font = 'bold 40px ui-monospace, monospace';
+    c.fillText(ach.count, w / 2, h * 0.82);
+
+    // блик
+    const sh = c.createLinearGradient(0, 0, w, h);
+    sh.addColorStop(0, 'rgba(255,215,0,.18)');
+    sh.addColorStop(.5, 'rgba(255,215,0,0)');
+    sh.addColorStop(1, 'rgba(255,215,0,.10)');
+    c.fillStyle = sh;
+    c.fillRect(10, 10, w - 20, h - 20);
+  } else {
+    // замок
+    c.font = '96px "Segoe UI Emoji","Apple Color Emoji",sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = 'rgba(120,140,170,.45)';
+    c.fillText('🔒', w / 2, h * 0.42);
+
+    // количество заданий
+    c.fillStyle = 'rgba(120,140,170,.6)';
+    c.font = 'bold 22px ui-monospace, monospace';
+    c.fillText(ach.count + ' заданий', w / 2, h * 0.72);
+
+    // подсказка
+    c.fillStyle = 'rgba(120,140,170,.35)';
+    c.font = '600 14px system-ui, sans-serif';
+    c.fillText('ЗАБЛОКИРОВАНО', w / 2, h * 0.86);
+  }
+}
+
+function createAchievementFrames() {
+  const startX = 0.55;
+  const stepX = 0.44;
+  const y = 1.85;
+  const z = -3.98;
+
+  ACHIEVEMENTS.forEach((ach, i) => {
+    const x = startX + i * stepX;
+
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.44, 0.028),
+      new THREE.MeshStandardMaterial({
+        color: 0x2a2018, roughness: 0.7, metalness: 0.35
+      })
+    );
+    frame.position.set(x, y, z + 0.012);
+    frame.castShadow = true;
+    scene.add(frame);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 320;
+    const cctx = canvas.getContext('2d');
+    drawAchievementCanvas(cctx, ach, false);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.30, 0.38),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+    );
+    plane.position.set(x, y, z + 0.028);
+    scene.add(plane);
+
+    achievementMeshes.push({ ach, canvas, cctx, tex });
+  });
+}
+
+function unlockAchievementMesh(i) {
+  const m = achievementMeshes[i];
+  if (!m) return;
+  drawAchievementCanvas(m.cctx, m.ach, true);
+  m.tex.needsUpdate = true;
+}
+
+function showAchievementBanner(ach) {
+  const banner = document.createElement('div');
+  banner.className = 'achvBanner';
+  banner.innerHTML = `
+    <div class="achvIcon">${ach.icon}</div>
+    <div class="achvInfo">
+      <div class="achvLbl">🏆 ДОСТИЖЕНИЕ</div>
+      <div class="achvTitle">${ach.title}</div>
+      <div class="achvDesc">${ach.count} заданий выполнено</div>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add('show'));
+  setTimeout(() => banner.classList.remove('show'), 4200);
+  setTimeout(() => banner.remove(), 4900);
+}
 
 /* ============================================================
    DESK
@@ -661,6 +844,9 @@ const chairMat = new THREE.MeshStandardMaterial({ color: 0x1c1f27, roughness: 0.
   scene.add(armPost);
 });
 
+// создаём рамки достижений
+createAchievementFrames();
+
 /* ============================================================
    ГЕНЕРАТОР ЗАДАНИЙ — 5 строк, 200+ вариантов
    ============================================================ */
@@ -849,14 +1035,14 @@ const state = {
   money: 120,
   energy: 100,
   hunger: 100,
-  caffeine: 0,       // 0..200
+  caffeine: 0,
   screen: 'desktop',
-  delivery: null,
-  foodOnDesk: null,
+  delivery: null,          // {t, total, item, qty}
+  foodOnDesk: null,        // { item, count }
   passedOut: false,
   sleeping: false,
   focused: false,
-  clock: 9 * 60,     // минуты от полуночи
+  clock: 9 * 60,
   codeTasks: null,
   codeTaskIdx: 0,
   codeTarget: '',
@@ -864,6 +1050,9 @@ const state = {
   codeCursor: 0,
   codeComplete: false,
   codeCompleteT: 0,
+  completedTasks: 0,
+  achievements: [false, false, false, false, false],
+  orderQty: [1, 1, 1, 1],
   transactions: [
     { text: 'Стартовый капитал', amount: 120 }
   ]
@@ -884,7 +1073,7 @@ const eyelidTop = document.getElementById('eyelidTop');
 const eyelidBottom = document.getElementById('eyelidBottom');
 
 function layoutOverlay() {
-  const PAD = 60;   // увеличено, чтобы шапка не налезала на экран
+  const PAD = 60;
   const vw = innerWidth;
   const vh = innerHeight;
   const availW = vw - PAD * 2;
@@ -1046,6 +1235,28 @@ function btn(x, y, w, h, label, action, color = '#2563eb', fs = 20, hover = true
   ctx.restore();
 
   if (hover) clickables.push({ x, y, w, h, action });
+}
+
+function smallBtn(x, y, w, h, label, action, color = '#334155') {
+  ctx.save();
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, color);
+  g.addColorStop(1, shade(color, -25));
+  ctx.fillStyle = g;
+  rr(ctx, x, y, w, h, 7);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,.16)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 20px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.restore();
+
+  clickables.push({ x, y, w, h, action });
 }
 
 function shade(hex, amt) {
@@ -1320,7 +1531,6 @@ function drawCodeApp() {
     ctx.fillText('// начните печатать или кликните в это поле...', inputX0, inputLineY0);
   }
 
-  // ---- Отладка ----
   const dbgY = inputY + inputH;
   const dbgH = SCR_H - dbgY;
   ctx.fillStyle = 'rgba(22,27,34,.96)';
@@ -1369,13 +1579,13 @@ function drawCodeApp() {
 }
 
 /* ============================================================
-   ДОСТАВКА ЕДЫ
+   ПРИЛОЖЕНИЕ "ДОСТАВКА" — с количеством порций
    ============================================================ */
 const FOOD_MENU = [
-  { name: 'Пицца Пепперони', price: 15, food: 40, time: 9, emoji: '🍕', color: '#ea8c1c' },
-  { name: 'Двойной Бургер', price: 10, food: 28, time: 6, emoji: '🍔', color: '#e0574a' },
-  { name: 'Суши-сет', price: 25, food: 55, time: 14, emoji: '🍣', color: '#22a06b' },
-  { name: 'Шаурма XL', price: 8, food: 22, time: 5, emoji: '🌯', color: '#c9922e' },
+  { name: 'Пицца Пепперони', price: 15, food: 40, time: 9,  emoji: '🍕' },
+  { name: 'Двойной Бургер',  price: 10, food: 28, time: 6,  emoji: '🍔' },
+  { name: 'Суши-сет',        price: 25, food: 55, time: 14, emoji: '🍣' },
+  { name: 'Шаурма XL',       price: 8,  food: 22, time: 5,  emoji: '🌯' },
 ];
 
 function drawFoodApp() {
@@ -1385,11 +1595,11 @@ function drawFoodApp() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#7d8590';
   ctx.font = '500 14px system-ui, sans-serif';
-  ctx.fillText('Курьер принесёт заказ прямо на стол. Вставать не нужно.', 24, 82);
+  ctx.fillText('Выберите количество и закажите. Один тип еды за раз.', 24, 80);
 
   FOOD_MENU.forEach((item, i) => {
-    const y = 112 + i * 108;
-    const h = 92;
+    const y = 106 + i * 106;
+    const h = 96;
 
     ctx.fillStyle = 'rgba(22,27,34,.85)';
     rr(ctx, 24, y, SCR_W - 48, h, 14); ctx.fill();
@@ -1397,41 +1607,59 @@ function drawFoodApp() {
     ctx.lineWidth = 1.5;
     rr(ctx, 24, y, SCR_W - 48, h, 14); ctx.stroke();
 
+    // эмодзи
     ctx.font = '46px "Segoe UI Emoji","Apple Color Emoji",sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(item.emoji, 78, y + h / 2);
+    ctx.fillText(item.emoji, 76, y + h / 2);
 
+    // название + инфо
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e6edf3';
-    ctx.font = '700 20px system-ui, sans-serif';
-    ctx.fillText(item.name, 126, y + 32);
+    ctx.font = '700 19px system-ui, sans-serif';
+    ctx.fillText(item.name, 122, y + 32);
 
     ctx.fillStyle = '#8b949e';
-    ctx.font = '500 14px system-ui, sans-serif';
-    ctx.fillText(`+${item.food} сытости   ·   доставка ~${item.time} сек`, 126, y + 60);
+    ctx.font = '500 13px system-ui, sans-serif';
+    ctx.fillText(`+${item.food} сытости · $${item.price}/порция · ~${item.time} сек`, 122, y + 60);
 
-    ctx.fillStyle = '#7ee787';
-    ctx.font = '700 22px system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('$' + item.price, SCR_W - 200, y + h / 2);
+    // виджет количества
+    const qty = state.orderQty[i];
+    const qY = y + h / 2 - 19;
+    const minusX = 700;
+    smallBtn(minusX, qY, 34, 38, '−', 'qtyMinus_' + i, '#3b4252');
 
-    const afford = state.money >= item.price;
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    rr(ctx, minusX + 38, qY, 42, 38, 6); ctx.fill();
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '700 20px ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(qty, minusX + 59, qY + 19);
+
+    smallBtn(minusX + 84, qY, 34, 38, '+', 'qtyPlus_' + i, '#3b4252');
+
+    // кнопка заказа
+    const total = item.price * qty;
+    const afford = state.money >= total;
     const busy = state.delivery !== null || state.foodOnDesk !== null;
     const canOrder = afford && !busy;
 
+    const btnX = SCR_W - 20 - 186;
+    const btnY = y + h / 2 - 22;
+
     if (canOrder) {
-      btn(SCR_W - 176, y + 22, 140, 48, 'ЗАКАЗАТЬ', 'order_' + i, '#059669', 16);
+      btn(btnX, btnY, 186, 44, `ЗАКАЗАТЬ · $${total}`, 'order_' + i, '#059669', 14);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,.05)';
-      rr(ctx, SCR_W - 176, y + 22, 140, 48, 10); ctx.fill();
-      ctx.fillStyle = 'rgba(139,148,158,.6)';
-      ctx.font = '700 15px system-ui, sans-serif';
+      rr(ctx, btnX, btnY, 186, 44, 10); ctx.fill();
+      ctx.fillStyle = 'rgba(139,148,158,.65)';
+      ctx.font = '700 14px system-ui, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const lbl = !afford ? 'НЕТ ДЕНЕГ' : (state.delivery ? 'В ПУТИ' : 'НА СТОЛЕ');
-      ctx.fillText(lbl, SCR_W - 106, y + 47);
+      const lbl = !afford ? 'НЕТ ДЕНЕГ' : 'ЗАНЯТО';
+      ctx.fillText(lbl, btnX + 93, btnY + 22);
     }
   });
 
+  // Нижняя строка статуса
   if (state.delivery) {
     const p = 1 - state.delivery.t / state.delivery.total;
     ctx.fillStyle = 'rgba(37,99,235,.15)';
@@ -1439,7 +1667,7 @@ function drawFoodApp() {
     ctx.fillStyle = '#58a6ff';
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`🛵 Курьер везёт: ${state.delivery.item.name}`, 42, SCR_H - 41);
+    ctx.fillText(`🛵 Курьер везёт: ${state.delivery.item.name} × ${state.delivery.qty}`, 42, SCR_H - 41);
 
     ctx.fillStyle = 'rgba(255,255,255,.08)';
     rr(ctx, SCR_W - 320, SCR_H - 50, 280, 18, 9); ctx.fill();
@@ -1451,7 +1679,10 @@ function drawFoodApp() {
     ctx.fillStyle = '#7ee787';
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('✅ Заказ доставлен! Возьмите еду со стола (клик по тарелке).', 42, SCR_H - 41);
+    ctx.fillText(
+      `✅ ${state.foodOnDesk.item.name} × ${state.foodOnDesk.count} на столе — клик по тарелке, чтобы съесть`,
+      42, SCR_H - 41
+    );
   }
 }
 
@@ -1534,57 +1765,238 @@ function drawScreen() {
 }
 
 /* ============================================================
-   ЕДА В 3D
+   МОДЕЛЬКИ ЕДЫ
+   ============================================================ */
+function createFoodModel(item) {
+  const g = new THREE.Group();
+
+  if (item.emoji === '🍕') {
+    // пицца
+    const crustMat = new THREE.MeshStandardMaterial({ color: 0xd9a05b, roughness: 0.85 });
+    const sauceMat = new THREE.MeshStandardMaterial({ color: 0xc44a2a, roughness: 0.7 });
+    const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, roughness: 0.55 });
+    const pepMat = new THREE.MeshStandardMaterial({ color: 0x8a1f1f, roughness: 0.6 });
+
+    const crust = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.008, 24), crustMat);
+    g.add(crust);
+
+    const sauce = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.004, 24), sauceMat);
+    sauce.position.y = 0.005;
+    g.add(sauce);
+
+    const cheese = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.0025, 24), cheeseMat);
+    cheese.position.y = 0.008;
+    g.add(cheese);
+
+    // пепперони
+    for (let i = 0; i < 5; i++) {
+      const a = i * (Math.PI * 2 / 5) + 0.3;
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.003, 12), pepMat);
+      p.position.set(Math.cos(a) * 0.02, 0.0105, Math.sin(a) * 0.02);
+      g.add(p);
+    }
+    // кусочки сыра
+    for (let i = 0; i < 5; i++) {
+      const c = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 6, 5), cheeseMat);
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 0.028;
+      c.position.set(Math.cos(a) * r, 0.010, Math.sin(a) * r);
+      g.add(c);
+    }
+  } else if (item.emoji === '🍔') {
+    // бургер
+    const bunMat = new THREE.MeshStandardMaterial({ color: 0xc98a4b, roughness: 0.85 });
+    const bunTopMat = new THREE.MeshStandardMaterial({ color: 0xd69657, roughness: 0.8 });
+    const pattyMat = new THREE.MeshStandardMaterial({ color: 0x4a2410, roughness: 0.75 });
+    const cheeseMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, roughness: 0.5 });
+    const lettuceMat = new THREE.MeshStandardMaterial({ color: 0x5aa82a, roughness: 0.8 });
+
+    const bottomBun = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.033, 0.018, 20), bunMat);
+    bottomBun.position.y = 0.009;
+    g.add(bottomBun);
+
+    const patty = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.014, 20), pattyMat);
+    patty.position.y = 0.025;
+    g.add(patty);
+
+    const cheese = new THREE.Mesh(new THREE.BoxGeometry(0.066, 0.003, 0.066), cheeseMat);
+    cheese.position.y = 0.0335;
+    g.add(cheese);
+
+    const lettuce = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.006, 6, 18), lettuceMat);
+    lettuce.rotation.x = Math.PI / 2;
+    lettuce.position.y = 0.039;
+    g.add(lettuce);
+
+    const topBun = new THREE.Mesh(
+      new THREE.SphereGeometry(0.038, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      bunTopMat
+    );
+    topBun.position.y = 0.042;
+    g.add(topBun);
+
+    // кунжут
+    const seedMat = new THREE.MeshStandardMaterial({ color: 0xfff4d0, roughness: 0.7 });
+    for (let i = 0; i < 5; i++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.002, 6, 4), seedMat);
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 0.025;
+      s.position.set(Math.cos(a) * r, 0.062 + Math.random() * 0.006, Math.sin(a) * r);
+      s.scale.y = 0.5;
+      g.add(s);
+    }
+  } else if (item.emoji === '🍣') {
+    // суши — 3 ролла
+    const riceMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e0, roughness: 0.75 });
+    const noriMat = new THREE.MeshStandardMaterial({ color: 0x1a3a2a, roughness: 0.5 });
+    const fillMat = new THREE.MeshStandardMaterial({ color: 0xe07a4a, roughness: 0.6 });
+    const fishMat = new THREE.MeshStandardMaterial({ color: 0xe89a6a, roughness: 0.7 });
+
+    for (let i = 0; i < 3; i++) {
+      const roll = new THREE.Group();
+
+      const rice = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.016, 16), riceMat);
+      rice.rotation.x = Math.PI / 2;
+      roll.add(rice);
+
+      const nori = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 16), noriMat);
+      nori.rotation.x = Math.PI / 2;
+      roll.add(nori);
+
+      const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.017, 10), fillMat);
+      fill.rotation.x = Math.PI / 2;
+      roll.add(fill);
+
+      // полоска рыбы сверху
+      const fish = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.003, 0.012), fishMat);
+      fish.position.y = 0.016;
+      roll.add(fish);
+
+      roll.position.set(-0.026 + i * 0.026, 0.018, (i === 1 ? -0.008 : 0.004));
+      roll.rotation.y = (i - 1) * 0.2;
+      g.add(roll);
+    }
+  } else if (item.emoji === '🌯') {
+    // шаурма
+    const wrapMat = new THREE.MeshStandardMaterial({ color: 0xe0c896, roughness: 0.85 });
+    const paperMat = new THREE.MeshStandardMaterial({ color: 0xf2ead0, roughness: 0.92 });
+    const fillMat = new THREE.MeshStandardMaterial({ color: 0xa8542a, roughness: 0.75 });
+    const vegMat = new THREE.MeshStandardMaterial({ color: 0x6aa830, roughness: 0.8 });
+
+    // основная лепёшка
+    const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.078, 18), wrapMat);
+    wrap.rotation.z = Math.PI / 2 - 0.28;
+    wrap.rotation.y = 0.5;
+    wrap.position.y = 0.028;
+    g.add(wrap);
+
+    // начинка торчит сверху
+    const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 14), fillMat);
+    fill.rotation.copy(wrap.rotation);
+    fill.position.copy(wrap.position);
+    fill.translateY(0.043);
+    g.add(fill);
+
+    // листик салата
+    const veg = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.004, 0.02), vegMat);
+    veg.rotation.copy(wrap.rotation);
+    veg.position.copy(wrap.position);
+    veg.translateY(0.052);
+    g.add(veg);
+
+    // бумажная обёртка снизу
+    const paper = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.027, 0.038, 18), paperMat);
+    paper.rotation.copy(wrap.rotation);
+    paper.position.copy(wrap.position);
+    paper.translateY(-0.033);
+    g.add(paper);
+  } else {
+    // запасной вариант
+    const blob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd98a3a, roughness: 0.7 })
+    );
+    blob.scale.y = 0.6;
+    blob.position.y = 0.02;
+    g.add(blob);
+  }
+
+  g.traverse(o => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.userData.type = 'food';
+    }
+  });
+  g.userData.type = 'food';
+  return g;
+}
+
+/* ============================================================
+   ЕДА НА СТОЛЕ (стопка порций)
    ============================================================ */
 let foodMesh = null;
 
-function spawnFood(item) {
+function rebuildFoodMesh() {
+  if (foodMesh) {
+    scene.remove(foodMesh);
+    foodMesh.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    foodMesh = null;
+  }
+  if (!state.foodOnDesk) return;
+  const { item, count } = state.foodOnDesk;
+  if (count <= 0) return;
+
   const g = new THREE.Group();
   g.position.set(-0.33, 0.75, -0.30);
+  g.userData.type = 'food';
 
   const plateMat = new THREE.MeshStandardMaterial({ color: 0xe8e8ea, roughness: 0.25, metalness: 0.05 });
-  const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.082, 0.014, 32), plateMat);
-  plate.position.y = 0.007;
-  plate.castShadow = true;
-  plate.userData.type = 'food';
-  g.add(plate);
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0xd2d4d8, roughness: 0.3 });
 
-  const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.004, 32),
-    new THREE.MeshStandardMaterial({ color: 0xd2d4d8, roughness: 0.3 }));
-  inner.position.y = 0.015;
-  g.add(inner);
+  for (let i = 0; i < count; i++) {
+    const unit = new THREE.Group();
+    unit.position.y = i * 0.014;
 
-  let foodColor = 0xd98a3a;
-  if (item.emoji === '🍔') foodColor = 0xc4762f;
-  if (item.emoji === '🍣') foodColor = 0xe07a6a;
-  if (item.emoji === '🌯') foodColor = 0xd6b06a;
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.082, 0.014, 32), plateMat);
+    plate.position.y = 0.007;
+    plate.castShadow = true;
+    plate.userData.type = 'food';
+    unit.add(plate);
 
-  const blob = new THREE.Mesh(
-    new THREE.SphereGeometry(0.045, 20, 14),
-    new THREE.MeshStandardMaterial({ color: foodColor, roughness: 0.72 })
-  );
-  blob.scale.set(1.25, 0.62, 1.25);
-  blob.position.y = 0.042;
-  blob.castShadow = true;
-  blob.userData.type = 'food';
-  g.add(blob);
+    const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.004, 32), innerMat);
+    inner.position.y = 0.015;
+    inner.userData.type = 'food';
+    unit.add(inner);
 
-  const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.06 });
+    // еда только на верхней тарелке
+    if (i === count - 1) {
+      const foodModel = createFoodModel(item);
+      foodModel.position.y = 0.017;
+      unit.add(foodModel);
+    }
+
+    g.add(unit);
+  }
+
+  // пар над верхней порцией
+  const steamMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.06, depthWrite: false
+  });
   for (let i = 0; i < 3; i++) {
     const s = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), steamMat.clone());
-    s.position.set((Math.random() - 0.5) * 0.04, 0.075 + i * 0.02, (Math.random() - 0.5) * 0.04);
+    s.position.set(
+      (Math.random() - 0.5) * 0.04,
+      0.085 + i * 0.02,
+      (Math.random() - 0.5) * 0.04
+    );
     s.userData.steam = true;
     s.userData.phase = Math.random() * Math.PI * 2;
     s.userData.baseY = s.position.y;
     g.add(s);
   }
 
-  g.userData.type = 'food';
-  g.userData.value = item.food;
-  g.userData.name = item.name;
   scene.add(g);
   foodMesh = g;
-  state.foodOnDesk = item;
 }
 
 /* ============================================================
@@ -1671,24 +2083,42 @@ function handleAction(action) {
   if (action === 'openFood') { state.screen = 'food'; needRedraw = true; return; }
   if (action === 'openBank') { state.screen = 'bank'; needRedraw = true; return; }
 
+  if (action.startsWith('qtyMinus_')) {
+    const idx = parseInt(action.split('_')[1]);
+    state.orderQty[idx] = Math.max(1, state.orderQty[idx] - 1);
+    needRedraw = true;
+    return;
+  }
+  if (action.startsWith('qtyPlus_')) {
+    const idx = parseInt(action.split('_')[1]);
+    state.orderQty[idx] = Math.min(9, state.orderQty[idx] + 1);
+    needRedraw = true;
+    return;
+  }
+
   if (action.startsWith('order_')) {
     const idx = parseInt(action.split('_')[1]);
     const item = FOOD_MENU[idx];
     if (!item) return;
-    if (state.money < item.price) { toast('Недостаточно средств 💸', '#ff7b72'); return; }
-    if (state.delivery || state.foodOnDesk) { toast('Сначала разберитесь с текущим заказом', '#f59e0b'); return; }
+    const qty = state.orderQty[idx];
+    const total = item.price * qty;
 
-    state.money -= item.price;
-    state.transactions.push({ text: `Заказ: ${item.name}`, amount: -item.price });
-    state.delivery = { t: item.time, total: item.time, item };
-    toast(`🛵 Заказ оформлен: ${item.name}`, '#60a5fa');
+    if (state.money < total) { toast('Недостаточно средств 💸', '#ff7b72'); return; }
+    if (state.delivery) { toast('Курьер уже в пути', '#f59e0b'); return; }
+    if (state.foodOnDesk) { toast('Сначала съешьте то, что на столе', '#f59e0b'); return; }
+
+    state.money -= total;
+    state.transactions.push({ text: `Заказ: ${item.name} × ${qty}`, amount: -total });
+    state.delivery = { t: item.time, total: item.time, item, qty };
+    state.orderQty[idx] = 1;
+    toast(`🛵 Заказ оформлен: ${item.name} × ${qty}`, '#60a5fa');
     needRedraw = true;
     return;
   }
 }
 
 /* ============================================================
-   КОФЕ — 100% базовая шкала, 200% = отключка
+   КОФЕ
    ============================================================ */
 let drinkAnim = 0;
 
@@ -1712,18 +2142,23 @@ function drinkCoffee() {
 }
 
 function eatFood() {
-  if (!foodMesh || state.passedOut || state.sleeping) return;
-  const val = foodMesh.userData.value;
-  const name = foodMesh.userData.name;
+  if (!foodMesh || !state.foodOnDesk) return;
+  if (state.passedOut || state.sleeping) return;
 
-  scene.remove(foodMesh);
-  foodMesh.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-  foodMesh = null;
-  state.foodOnDesk = null;
+  const { item, count } = state.foodOnDesk;
 
-  state.hunger = Math.min(100, state.hunger + val);
+  state.hunger = Math.min(100, state.hunger + item.food);
   state.energy = Math.min(130, state.energy + 6);
-  toast(`😋 Съедено: ${name}. Сытость +${val}`, '#7ee787');
+
+  const newCount = count - 1;
+  if (newCount <= 0) {
+    state.foodOnDesk = null;
+    toast(`😋 Съедено: ${item.name}. Сытость +${item.food}`, '#7ee787');
+  } else {
+    state.foodOnDesk = { item, count: newCount };
+    toast(`😋 Съедено: ${item.name}. Осталось ${newCount}`, '#7ee787');
+  }
+  rebuildFoodMesh();
   needRedraw = true;
 }
 
@@ -1760,7 +2195,7 @@ function passOut() {
 }
 
 /* ============================================================
-   СОН (8 часов)
+   СОН
    ============================================================ */
 function startSleep() {
   if (state.sleeping || state.passedOut) return;
@@ -1770,11 +2205,9 @@ function startSleep() {
   sleepBtn.classList.remove('visible');
   toast('😴 Засыпаю...', '#8b5cf6');
 
-  // Закрытие век
   eyelidTop.style.height = '50%';
   eyelidBottom.style.height = '50%';
 
-  // Пока веки закрыты — проматываем 8 часов и восстанавливаем силы
   setTimeout(() => {
     state.clock += 8 * 60;
     state.energy = 100;
@@ -1783,7 +2216,6 @@ function startSleep() {
     updateHUD();
   }, 1600);
 
-  // Пробуждение — открываем веки
   setTimeout(() => {
     eyelidTop.style.height = '0';
     eyelidBottom.style.height = '0';
@@ -1859,7 +2291,6 @@ function deleteAtCursor() {
 
 addEventListener('keydown', e => {
   if (state.sleeping) return;
-
   if (e.key === 'Escape' && state.focused) { setFocused(false); return; }
 
   const isCodeApp = state.focused && state.screen === 'code' && !state.passedOut && !state.codeComplete;
@@ -1953,10 +2384,9 @@ addEventListener('keydown', e => {
 });
 
 /* ============================================================
-   ВРЕМЯ СУТОК — освещение окна
+   ВРЕМЯ СУТОК
    ============================================================ */
 const TIME_KEYFRAMES = [
-  // час, цвет окна, инт. окна, эмиссия стекла, инт. эмиссии, инт. комнатного света
   { h: 0,   wc: 0x1a2a4a, wi: 0.5, se: 0x0a1428, sei: 0.4, ri: 2.5 },
   { h: 5,   wc: 0x2a3a5a, wi: 0.7, se: 0x0e1a33, sei: 0.6, ri: 3.0 },
   { h: 6.5, wc: 0xff8a4a, wi: 2.0, se: 0xff6644, sei: 1.4, ri: 4.5 },
@@ -1995,13 +2425,24 @@ function updateTimeLighting() {
   winGlassMat.emissive.setHex(lerpColor(k0.se, k1.se, t));
   winGlassMat.emissiveIntensity = k0.sei + (k1.sei - k0.sei) * t;
 
-  // Комнатный свет — мягко меняется, но остаётся тёплым
   roomLight.intensity = k0.ri + (k1.ri - k0.ri) * t;
 
-  // Огоньки города гаснут днём
-  const dayFactor = Math.max(0, Math.sin((h - 5) / 14 * Math.PI)); // 0 ночью → 1 днём
+  const dayFactor = Math.max(0, Math.sin((h - 5) / 14 * Math.PI));
   const cityOpacity = 0.15 + 0.85 * (1 - dayFactor);
   cityDots.forEach(d => { d.material.opacity = cityOpacity; });
+}
+
+/* ============================================================
+   ДОСТИЖЕНИЯ — ЛОГИКА
+   ============================================================ */
+function checkAchievements() {
+  ACHIEVEMENTS.forEach((a, i) => {
+    if (!state.achievements[i] && state.completedTasks >= a.count) {
+      state.achievements[i] = true;
+      unlockAchievementMesh(i);
+      showAchievementBanner(a);
+    }
+  });
 }
 
 /* ============================================================
@@ -2020,26 +2461,21 @@ function nextTask() {
 }
 
 function update(dt) {
-  // ---- Обморок от кофе ----
   if (state.passedOut) {
     camera.rotation.z += (0.55 - camera.rotation.z) * Math.min(1, dt * 2.5);
     camera.rotation.x += (-0.75 - camera.rotation.x) * Math.min(1, dt * 1.5);
     return;
   }
 
-  // ---- Пассивные статы ----
   state.hunger -= 0.55 * dt;
-  // Кофеин выводится медленнее, раз шкала до 200
   state.caffeine = Math.max(0, state.caffeine - 4.0 * dt);
   state.hunger = Math.max(0, Math.min(100, state.hunger));
 
-  // ---- Отдых: не в ноутбуке → медленно восстанавливаемся ----
   if (!state.focused && !state.sleeping) {
     state.energy = Math.min(130, state.energy + 0.4 * dt);
   }
   state.energy = Math.max(0, Math.min(130, state.energy));
 
-  // ---- Истощение ----
   if (state.energy <= 0 && !state.passedOut && !state.sleeping) {
     state.energy = 0;
     toast('😵 Ты вырубился от истощения...', '#ff7b72');
@@ -2059,22 +2495,21 @@ function update(dt) {
     }, 4200);
   }
 
-  // ---- Время: 1 игровой час = 1 реальная минута (1 игровая минута/сек) ----
   state.clock += dt * 1.0;
-
-  // ---- Освещение по времени суток ----
   updateTimeLighting();
 
-  // ---- Проверка завершения задания ----
+  // Проверка завершения задания
   if (!state.codeComplete &&
       state.codeTyped.length === state.codeTarget.length &&
       state.codeTyped === state.codeTarget) {
     state.codeComplete = true;
     state.codeCompleteT = 0;
+    state.completedTasks++;
     const reward = 40 + Math.floor(Math.random() * 51);
     state.money += reward;
     state.transactions.push({ text: 'Код написан без ошибок', amount: reward });
     toast(`✅ Код скомпилирован! +$${reward}`, '#7ee787');
+    checkAchievements();
     needRedraw = true;
   }
   if (state.codeComplete) {
@@ -2089,7 +2524,6 @@ function update(dt) {
     needRedraw = true;
   }
 
-  // ---- Анимация клавиш ----
   if (Math.random() < dt * 12) {
     const k = allKeys[Math.floor(Math.random() * allKeys.length)];
     k.position.y = k.userData.baseY - 0.0016;
@@ -2102,24 +2536,23 @@ function update(dt) {
     }
   }
 
-  // ---- Доставка ----
+  // Доставка
   if (state.delivery) {
     state.delivery.t -= dt;
     if (state.delivery.t <= 0) {
-      spawnFood(state.delivery.item);
-      toast(`📦 Курьер доставил: ${state.delivery.item.name}!`, '#7ee787');
+      state.foodOnDesk = { item: state.delivery.item, count: state.delivery.qty };
+      rebuildFoodMesh();
+      toast(`📦 Курьер доставил: ${state.delivery.item.name} × ${state.delivery.qty}!`, '#7ee787');
       state.delivery = null;
       needRedraw = true;
     } else needRedraw = true;
   }
 
-  // ---- Кофе всегда полон ----
   coffee.position.y = 0.088;
   foam.position.y = 0.0885;
   coffee.visible = true;
   foam.visible = true;
 
-  // ---- Пар от еды ----
   if (foodMesh) {
     foodMesh.children.forEach(c => {
       if (c.userData.steam) {
@@ -2130,7 +2563,6 @@ function update(dt) {
     });
   }
 
-  // ---- Анимация глотка ----
   if (drinkAnim > 0) {
     drinkAnim = Math.max(0, drinkAnim - dt * 2.2);
     const t = Math.sin(drinkAnim * Math.PI);
@@ -2143,9 +2575,7 @@ function update(dt) {
     mug.position.z += (-0.30 - mug.position.z) * Math.min(1, dt * 8);
   }
 
-  // ---- Камера ----
   if (state.sleeping) {
-    // Запрокидываем голову назад и выравниваем
     camera.rotation.x += (0.45 - camera.rotation.x) * Math.min(1, dt * 1.5);
     camera.rotation.y += (0 - camera.rotation.y) * Math.min(1, dt * 1.5);
     camera.rotation.z += (0 - camera.rotation.z) * Math.min(1, dt * 1.5);
@@ -2171,12 +2601,10 @@ function update(dt) {
 }
 
 function updateHUD() {
-  // Время
   const hh = String(Math.floor(state.clock / 60) % 24).padStart(2, '0');
   const mm = String(Math.floor(state.clock % 60)).padStart(2, '0');
   document.getElementById('timeVal').textContent = hh + ':' + mm;
 
-  // Энергия
   const e = Math.round(state.energy);
   const eBar = document.getElementById('energyBar');
   eBar.style.width = Math.min(100, e) + '%';
@@ -2186,14 +2614,12 @@ function updateHUD() {
     e < 55 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' :
              'linear-gradient(90deg,#3b82f6,#60a5fa)';
 
-  // Отдыхаем — включаем пульсацию
   if (!state.focused && !state.sleeping && !state.passedOut && state.energy < 130) {
     eBar.classList.add('resting');
   } else {
     eBar.classList.remove('resting');
   }
 
-  // Сытость
   const h = Math.round(state.hunger);
   document.getElementById('hungerBar').style.width = h + '%';
   document.getElementById('hungerVal').textContent = h + '%';
@@ -2201,7 +2627,6 @@ function updateHUD() {
     h < 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' :
              'linear-gradient(90deg,#f59e0b,#fbbf24)';
 
-  // Кофеин — шкала 0..100, но значение до 200
   const c = Math.round(state.caffeine);
   const cBar = document.getElementById('caffeineBar');
   const cVal = document.getElementById('caffeineVal');
@@ -2222,7 +2647,6 @@ function updateHUD() {
     cVal.style.color = '';
   }
 
-  // Кнопка сна
   if (state.energy < 20 && !state.sleeping && !state.passedOut) {
     sleepBtn.classList.add('visible');
   } else {
