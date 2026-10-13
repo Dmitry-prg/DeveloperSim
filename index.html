@@ -30,7 +30,6 @@
     border:1px solid rgba(120,160,255,.22);border-radius:14px;
     padding:9px 18px;box-shadow:0 12px 40px rgba(0,0,0,.55);
     pointer-events:auto;
-    transition:gap .2s, padding .2s;
   }
   .statItem{display:flex;align-items:center;gap:8px;font-size:13px;color:#c8d4ea}
   .statItem .ic{font-size:16px;line-height:1;flex-shrink:0}
@@ -44,7 +43,8 @@
     font-size:12px;min-width:44px;text-align:right;letter-spacing:.4px;
     white-space:nowrap}
   .divider{width:1px;height:22px;background:rgba(255,255,255,.1);flex-shrink:0}
-  #energyBar{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+
+  #healthBar{background:linear-gradient(90deg,#22c55e,#4ade80)}
   #hungerBar{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
   #caffeineBar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);width:0%}
   #timeVal{color:#c9d1d9;font-weight:700;min-width:auto}
@@ -65,15 +65,23 @@
     transform:rotate(45deg);
   }
 
-  .fill.resting{animation:energyRest 1.4s ease-in-out infinite}
-  @keyframes energyRest{
+  /* Восстановление здоровья — мягкое свечение */
+  .fill.resting{animation:healthRest 1.4s ease-in-out infinite}
+  @keyframes healthRest{
     0%,100%{box-shadow:0 0 0 0 rgba(126,231,135,0)}
     50%{box-shadow:0 0 8px 2px rgba(126,231,135,.75)}
   }
+  /* Кофеин перенаполнен */
   .fill.overflowing{animation:cafPulse .8s ease-in-out infinite}
   @keyframes cafPulse{
     0%,100%{filter:brightness(1)}
     50%{filter:brightness(1.7)}
+  }
+  /* Голод — критический */
+  .fill.starving{animation:starvingPulse .9s ease-in-out infinite}
+  @keyframes starvingPulse{
+    0%,100%{filter:brightness(1)}
+    50%{filter:brightness(1.7) saturate(1.4)}
   }
 
   #sleepBtn{
@@ -90,8 +98,7 @@
     box-shadow:0 14px 44px rgba(96,165,250,.55);
     opacity:0;pointer-events:none;
     transition:opacity .35s,transform .35s,box-shadow .25s;
-    touch-action:manipulation;
-    white-space:nowrap;
+    touch-action:manipulation;white-space:nowrap;
   }
   #sleepBtn.visible{
     opacity:1;pointer-events:auto;
@@ -117,8 +124,7 @@
     z-index:100;display:none;
     align-items:center;justify-content:center;
     animation:modalFade .22s ease;
-    padding:20px;
-    overflow-y:auto;
+    padding:20px;overflow-y:auto;
   }
   #settingsModal.show{display:flex}
   @keyframes modalFade{from{opacity:0}to{opacity:1}}
@@ -325,26 +331,12 @@
     to   { transform: scale(1);   opacity: 1; filter: blur(0); }
   }
 
-  /* Скрытый ввод для мобильной клавиатуры */
   #mobileInput {
-    position: fixed;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 200px;
-    height: 30px;
-    opacity: 0.01;
-    z-index: 9999;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: transparent;
-    caret-color: transparent;
-    font-size: 16px;
-    resize: none;
-    padding: 0;
-    margin: 0;
-    pointer-events: none;
+    position: fixed;left: 50%;bottom: 0;transform: translateX(-50%);
+    width: 200px;height: 30px;opacity: 0.01;z-index: 9999;
+    border: 0;outline: 0;background: transparent;color: transparent;
+    caret-color: transparent;font-size: 16px;resize: none;
+    padding: 0;margin: 0;pointer-events: none;
   }
 
   /* ============================================================
@@ -371,8 +363,7 @@
     #settingsBtn { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
 
     #sleepBtn {
-      padding: 16px 36px;
-      font-size: 17px;
+      padding: 16px 36px;font-size: 17px;
       bottom: calc(70px + env(safe-area-inset-bottom));
       border-radius: 16px;
     }
@@ -400,7 +391,6 @@
     #introCard h1 { font-size: 22px; letter-spacing: 2px; }
     #introCard p { font-size: 11.5px; line-height: 1.8; margin-top: 10px; }
     #introCard kbd { font-size: 11px; padding: 2px 6px; }
-    #introCard div[style*="font-size:12px"] { font-size: 10px !important; letter-spacing: 2px !important; }
 
     #fadeTxt { font-size: 18px; letter-spacing: 2px; }
     #hint { font-size: 11.5px; padding: 8px 16px; }
@@ -415,17 +405,14 @@
     #settingsBtn { width: 26px; height: 26px; font-size: 13px; }
   }
 
-  /* Ландшафт на телефонах */
   @media (max-height: 480px) and (orientation: landscape) {
     .hudbar { padding: 5px 10px; gap: 8px; }
     .statItem .lbl { display: none; }
     .minibar { width: 36px; height: 4px; }
     .statItem .val { font-size: 10px; min-width: 30px; }
     #hud { top: calc(4px + env(safe-area-inset-top)); }
-    #sleepBtn {
-      padding: 11px 24px;font-size: 14px;
-      bottom: calc(20px + env(safe-area-inset-bottom));
-    }
+    #sleepBtn { padding: 11px 24px;font-size: 14px;
+      bottom: calc(20px + env(safe-area-inset-bottom)); }
     #introCard { padding: 16px 20px; }
     #introCard h1 { font-size: 18px; }
     #introCard p { font-size: 10px; line-height: 1.6; margin-top: 6px; }
@@ -444,10 +431,10 @@
     </div>
     <div class="divider"></div>
     <div class="statItem">
-      <span class="ic">⚡</span>
-      <span class="lbl">Энергия</span>
-      <div class="minibar"><div class="fill" id="energyBar"></div></div>
-      <span class="val" id="energyVal">100%</span>
+      <span class="ic">❤️</span>
+      <span class="lbl">Здоровье</span>
+      <div class="minibar"><div class="fill" id="healthBar"></div></div>
+      <span class="val" id="healthVal">100%</span>
     </div>
     <div class="divider"></div>
     <div class="statItem">
@@ -484,6 +471,7 @@
     <div class="modalSub">Прогресс сохраняется в вашем браузере (localStorage). Данные не уходят на сервер.</div>
 
     <div class="modalStat"><span>💰 Баланс</span><b id="msBalance">$120</b></div>
+    <div class="modalStat"><span>❤️ Здоровье</span><b id="msHealth">100%</b></div>
     <div class="modalStat"><span>✅ Заданий выполнено</span><b id="msTasks">0</b></div>
     <div class="modalStat"><span>🏆 Достижений открыто</span><b id="msAchievements">0 / 5</b></div>
     <div class="modalStat"><span>💾 Последнее сохранение</span><b id="msSaved">—</b></div>
@@ -513,10 +501,11 @@
     <h1>DEVELOPER SIMULATOR</h1>
     <div style="font-size:12px;letter-spacing:3px;color:#5a6a88">СИМУЛЯТОР ЖИЗНИ РАЗРАБОТЧИКА</div>
     <p>
-      <kbd>Свайп</kbd> — осмотреться<br>
-      <kbd>Тап по ноутбуку</kbd> — открыть экран<br>
-      <kbd>Тап по коду</kbd> — поставить курсор<br>
-      <kbd>Тап мимо</kbd> — закрыть и отдохнуть<br>
+      <kbd>Свайп / мышь</kbd> — осмотреться<br>
+      <kbd>Клик по ноутбуку</kbd> — открыть экран<br>
+      <kbd>Клик по коду</kbd> — поставить курсор<br>
+      <kbd>Клик мимо</kbd> — отдохнуть (реген здоровья)<br>
+      <kbd>⚠</kbd> — при 0% сытости здоровье тает<br>
       <kbd>⚙ в шапке</kbd> — настройки и сохранение
     </p>
   </div>
@@ -534,7 +523,7 @@
 import * as THREE from 'three';
 
 /* ============================================================
-   ОПРЕДЕЛЕНИЕ МОБИЛЬНОГО УСТРОЙСТВА
+   МОБИЛЬНОЕ ОПРЕДЕЛЕНИЕ
    ============================================================ */
 const isTouch = ('ontouchstart' in window) ||
                 (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
@@ -561,7 +550,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(isMobile ? Math.min(devicePixelRatio, 1.5) : Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = !isMobile;   // на мобилках экономим — без теней
+renderer.shadowMap.enabled = !isMobile;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -625,7 +614,6 @@ ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = 3;
 room.add(ceiling);
 
-// Окно
 const windowGroup = new THREE.Group();
 windowGroup.position.set(-3.98, 1.75, -0.4);
 windowGroup.rotation.y = Math.PI / 2;
@@ -661,7 +649,6 @@ const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.4, 0.1), winFrameMat
 frameL.position.set(-0.89, 0, 0.03); windowGroup.add(frameL);
 const frameR = frameL.clone(); frameR.position.set(0.89, 0, 0.03); windowGroup.add(frameR);
 
-// Постер
 const posterCanvas = document.createElement('canvas');
 posterCanvas.width = 512; posterCanvas.height = 700;
 const pctx = posterCanvas.getContext('2d');
@@ -709,12 +696,9 @@ function drawAchievementCanvas(c, ach, unlocked) {
   const w = c.canvas.width, h = c.canvas.height;
   if (unlocked) {
     const g = c.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#1e2840');
-    g.addColorStop(1, '#14182a');
+    g.addColorStop(0, '#1e2840'); g.addColorStop(1, '#14182a');
     c.fillStyle = g;
-  } else {
-    c.fillStyle = '#0a0d14';
-  }
+  } else c.fillStyle = '#0a0d14';
   c.fillRect(0, 0, w, h);
 
   c.strokeStyle = unlocked ? '#ffd700' : '#2a3040';
@@ -733,11 +717,9 @@ function drawAchievementCanvas(c, ach, unlocked) {
     c.font = '80px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(ach.icon, w / 2, h * 0.34);
-
     c.fillStyle = '#ffd700';
     c.font = 'bold 26px system-ui, sans-serif';
     c.fillText(ach.title, w / 2, h * 0.62);
-
     c.fillStyle = '#e6edf3';
     c.font = 'bold 40px ui-monospace, monospace';
     c.fillText(ach.count, w / 2, h * 0.82);
@@ -746,11 +728,9 @@ function drawAchievementCanvas(c, ach, unlocked) {
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = 'rgba(120,140,170,.45)';
     c.fillText('🔒', w / 2, h * 0.42);
-
     c.fillStyle = 'rgba(120,140,170,.6)';
     c.font = 'bold 22px ui-monospace, monospace';
     c.fillText(ach.count + ' заданий', w / 2, h * 0.72);
-
     c.fillStyle = 'rgba(120,140,170,.35)';
     c.font = '600 14px system-ui, sans-serif';
     c.fillText('ЗАБЛОКИРОВАНО', w / 2, h * 0.86);
@@ -758,10 +738,7 @@ function drawAchievementCanvas(c, ach, unlocked) {
 }
 
 function createAchievementFrames() {
-  const startX = 0.55;
-  const stepX = 0.44;
-  const y = 1.85;
-  const z = -3.98;
+  const startX = 0.55, stepX = 0.44, y = 1.85, z = -3.98;
 
   ACHIEVEMENTS.forEach((ach, i) => {
     const x = startX + i * stepX;
@@ -1260,15 +1237,17 @@ console.log(joined.length);`);
 }
 
 /* ============================================================
-   СОХРАНЕНИЕ
+   СОХРАНЕНИЕ (v2 — health вместо energy)
    ============================================================ */
-const SAVE_KEY = 'devsim.save.v1';
+const SAVE_KEY = 'devsim.save.v2';
 
 function serializeState() {
   return {
-    v: 1,
+    v: 2,
     savedAt: Date.now(),
-    money: state.money, energy: state.energy, hunger: state.hunger,
+    money: state.money,
+    health: state.health,
+    hunger: state.hunger,
     caffeine: state.caffeine, clock: state.clock,
     completedTasks: state.completedTasks,
     achievements: state.achievements.slice(),
@@ -1299,10 +1278,10 @@ function loadProgress() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    if (!data || data.v !== 1) return false;
+    if (!data || data.v !== 2) return false;
 
     if (typeof data.money === 'number') state.money = data.money;
-    if (typeof data.energy === 'number') state.energy = data.energy;
+    if (typeof data.health === 'number') state.health = data.health;
     if (typeof data.hunger === 'number') state.hunger = data.hunger;
     if (typeof data.caffeine === 'number') state.caffeine = data.caffeine;
     if (typeof data.clock === 'number') state.clock = data.clock;
@@ -1329,7 +1308,11 @@ function loadProgress() {
 }
 
 function clearProgress() {
-  try { localStorage.removeItem(SAVE_KEY); return true; } catch (e) { return false; }
+  try {
+    localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem('devsim.save.v1'); // старое сохранение тоже чистим
+    return true;
+  } catch (e) { return false; }
 }
 
 let lastSavedAt = 0;
@@ -1338,7 +1321,10 @@ let lastSavedAt = 0;
    СОСТОЯНИЕ
    ============================================================ */
 const state = {
-  money: 120, energy: 100, hunger: 100, caffeine: 0,
+  money: 120,
+  health: 100,        // ← теперь здоровье вместо энергии
+  hunger: 100,
+  caffeine: 0,
   screen: 'desktop', delivery: null, foodOnDesk: null,
   passedOut: false, sleeping: false, focused: false,
   clock: 9 * 60,
@@ -1408,7 +1394,7 @@ function setFocused(v) {
 screenBackdrop.addEventListener('click', () => setFocused(false));
 
 /* ============================================================
-   LAYOUT
+   LAYOUT КОДА
    ============================================================ */
 const CODE_LAYOUT = {
   taskY: 54, taskH: 246, inputH: 246, headerH: 38, lineH: 34,
@@ -1454,7 +1440,6 @@ function handleOverlayTap(clientX, clientY) {
   const x = ((clientX - r.left) / r.width) * SCR_W;
   const y = ((clientY - r.top) / r.height) * SCR_H;
 
-  // проверяем кнопки
   for (const c of clickables) {
     if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
       handleAction(c.action);
@@ -1462,7 +1447,6 @@ function handleOverlayTap(clientX, clientY) {
     }
   }
 
-  // тап по области кода — ставим курсор + фокусируем скрытый input
   if (state.screen === 'code' && !state.codeComplete) {
     const inputY = CODE_LAYOUT.taskY + CODE_LAYOUT.taskH;
     const inputBottom = inputY + CODE_LAYOUT.inputH;
@@ -1470,8 +1454,6 @@ function handleOverlayTap(clientX, clientY) {
       state.codeCursor = getCursorIndexFromClick(x, y);
       needRedraw = true;
       drawScreen();
-
-      // Показываем мобильную клавиатуру
       if (isTouch) {
         try {
           mobileInput.value = ' ';
@@ -1485,11 +1467,8 @@ function handleOverlayTap(clientX, clientY) {
   }
 }
 
-screenCanvas.addEventListener('click', (e) => {
-  handleOverlayTap(e.clientX, e.clientY);
-});
+screenCanvas.addEventListener('click', (e) => handleOverlayTap(e.clientX, e.clientY));
 
-// Мобильные тапы
 let overlayTouchStart = 0, overlayStartPt = null;
 screenCanvas.addEventListener('touchstart', (e) => {
   if (e.touches.length === 1) {
@@ -1529,8 +1508,7 @@ function rr(c, x, y, w, h, r) {
 function btn(x, y, w, h, label, action, color = '#2563eb', fs = 20, hover = true) {
   ctx.save();
   const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, color);
-  g.addColorStop(1, shade(color, -22));
+  g.addColorStop(0, color); g.addColorStop(1, shade(color, -22));
   ctx.fillStyle = g;
   rr(ctx, x, y, w, h, 10); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.18)';
@@ -1641,8 +1619,7 @@ function drawDesktop() {
   ];
 
   icons.forEach(ic => {
-    const s = 150;
-    const y = 150;
+    const s = 150, y = 150;
 
     ctx.save();
     const gg = ctx.createLinearGradient(ic.x - s / 2, y, ic.x + s / 2, y + s);
@@ -1673,7 +1650,7 @@ function drawDesktop() {
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(139,148,158,.5)';
   ctx.font = '500 13px ui-monospace, monospace';
-  ctx.fillText('нажмите мимо ноутбука, чтобы отдохнуть', SCR_W / 2, SCR_H - 28);
+  ctx.fillText('отдохните мимо ноутбука — здоровье восстановится', SCR_W / 2, SCR_H - 28);
 }
 
 const HL_KEYWORDS = ['const','let','var','function','return','if','else','for','while',
@@ -2052,7 +2029,6 @@ function createFoodModel(item) {
     sauce.position.y = 0.005; g.add(sauce);
     const cheese = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.0025, 20), cheeseMat);
     cheese.position.y = 0.008; g.add(cheese);
-
     for (let i = 0; i < 5; i++) {
       const a = i * (Math.PI * 2 / 5) + 0.3;
       const p = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.003, 10), pepMat);
@@ -2196,7 +2172,6 @@ let lookYaw = 0, lookPitch = 0;
 let targetYaw = 0, targetPitch = 0;
 const BASE_PITCH = -0.34;
 
-// Ограничения для тач-свайпа
 const YAW_LIMIT = 0.95;
 const PITCH_LIMIT = 0.55;
 
@@ -2236,7 +2211,6 @@ function handleWorldTap(clientX, clientY) {
   }
 }
 
-/* ---- Мышь ---- */
 function onPointerMove(e) {
   if (state.focused || state.sleeping) return;
   if (e.pointerType === 'touch') return;
@@ -2251,11 +2225,10 @@ function onPointerMove(e) {
 }
 
 function onCanvasClick(e) {
-  if (e.pointerType === 'touch') return;   // тач обрабатывается отдельно
+  if (e.pointerType === 'touch') return;
   handleWorldTap(e.clientX, e.clientY);
 }
 
-/* ---- Тач: свайп = поворот, тап = взаимодействие ---- */
 let touchStartPt = null;
 let touchStartTime = 0;
 let lastTouchPos = null;
@@ -2366,20 +2339,20 @@ function handleAction(action) {
 }
 
 /* ============================================================
-   КОФЕ, СОН, ЕДА
+   КОФЕ, ЕДА, СОН
    ============================================================ */
 let drinkAnim = 0;
 
 function drinkCoffee() {
   if (state.passedOut || state.sleeping) return;
-  state.energy = Math.min(130, state.energy + 22);
+  state.health = Math.min(100, state.health + 22);
   state.caffeine += 27;
   drinkAnim = 1;
 
   if (state.caffeine >= 200) passOut();
   else if (state.caffeine > 156) toast('⚠️ Передозировка кофеина...', '#f59e0b');
   else if (state.caffeine > 100) toast('☕ Кофеин за 100%! Сердце частит', '#f59e0b');
-  else toast('☕ Глоток кофе. Бодрость +22', '#a78bfa');
+  else toast('☕ Кофе. Здоровье +22', '#a78bfa');
 
   saveProgress(true);
 }
@@ -2390,7 +2363,7 @@ function eatFood() {
 
   const { item, count } = state.foodOnDesk;
   state.hunger = Math.min(100, state.hunger + item.food);
-  state.energy = Math.min(130, state.energy + 6);
+  state.health = Math.min(100, state.health + 5);
 
   const newCount = count - 1;
   if (newCount <= 0) {
@@ -2427,13 +2400,42 @@ function passOut() {
 
   setTimeout(() => {
     state.caffeine = 0;
-    state.energy = 45;
+    state.health = 45;
     state.hunger = Math.max(0, state.hunger - 25);
     state.clock += 120;
     state.passedOut = false;
     fadeTxt.style.opacity = '0';
     fadeEl.style.opacity = '0';
     toast('Пробуждение. Голова гудит.', '#ff7b72');
+    saveProgress(true);
+  }, 4600);
+}
+
+function collapseFromHunger() {
+  if (state.passedOut || state.sleeping) return;
+  state.passedOut = true;
+  state.health = 0;
+  setFocused(false);
+  saveProgress(true);
+
+  fadeTxt.textContent = 'ИСТОЩЕНИЕ ОТ ГОЛОДА...';
+  fadeEl.style.opacity = '1';
+  setTimeout(() => { fadeTxt.style.opacity = '1'; }, 400);
+
+  setTimeout(() => {
+    fadeTxt.style.opacity = '0';
+    setTimeout(() => { fadeTxt.textContent = 'ТЫ ОТКЛЮЧИЛСЯ НА 2 ЧАСА'; }, 300);
+    setTimeout(() => { fadeTxt.style.opacity = '1'; }, 400);
+  }, 2000);
+
+  setTimeout(() => {
+    state.health = 25;
+    state.hunger = 15;
+    state.clock += 120;
+    state.passedOut = false;
+    fadeTxt.style.opacity = '0';
+    fadeEl.style.opacity = '0';
+    toast('Проснулся. Срочно поешь!', '#f59e0b');
     saveProgress(true);
   }, 4600);
 }
@@ -2451,7 +2453,7 @@ function startSleep() {
 
   setTimeout(() => {
     state.clock += 8 * 60;
-    state.energy = 100;
+    state.health = 100;
     state.hunger = Math.max(0, state.hunger - 25);
     state.caffeine = Math.max(0, state.caffeine - 100);
     updateHUD();
@@ -2504,7 +2506,7 @@ function showHint(msg) {
 /* ============================================================
    ВВОД КОДА
    ============================================================ */
-const CHAR_ENERGY_COST = 0.35;
+const CHAR_HEALTH_COST = 0.2;   // печатание немного отнимает здоровье
 
 function insertChar(ch) {
   const typed = state.codeTyped;
@@ -2513,7 +2515,7 @@ function insertChar(ch) {
   const cur = Math.max(0, Math.min(state.codeCursor, typed.length));
   state.codeTyped = typed.slice(0, cur) + ch + typed.slice(cur);
   state.codeCursor = cur + 1;
-  state.energy = Math.max(0, state.energy - CHAR_ENERGY_COST);
+  state.health = Math.max(0, state.health - CHAR_HEALTH_COST);
   needRedraw = true;
   drawScreen();
 }
@@ -2533,7 +2535,6 @@ function deleteAtCursor() {
   needRedraw = true; drawScreen();
 }
 
-/* ---- Мобильный ввод через скрытый textarea ---- */
 mobileInput.value = ' ';
 mobileInput.addEventListener('input', () => {
   const val = mobileInput.value;
@@ -2542,22 +2543,18 @@ mobileInput.addEventListener('input', () => {
       const ch = val[i];
       if (ch === '\n') {
         if (state.codeTyped.length < state.codeTarget.length) insertChar('\n');
-      } else {
-        insertChar(ch);
-      }
+      } else insertChar(ch);
     }
     mobileInput.value = ' ';
   } else if (val.length === 0) {
     backspaceAtCursor();
     mobileInput.value = ' ';
   }
-  // Сброс каретки
   setTimeout(() => {
     try { mobileInput.setSelectionRange(1, 1); } catch (e) {}
   }, 0);
 });
 
-// Перехват Enter для мобильного textarea
 mobileInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -2567,8 +2564,6 @@ mobileInput.addEventListener('keydown', (e) => {
       try { mobileInput.setSelectionRange(1, 1); } catch (err) {}
     }, 0);
   } else if (e.key === 'Backspace') {
-    // Если поле непустое (мы держим ' '), обычная обработка input сработает.
-    // Но если пользователь быстро нажимает и input не срабатывает — вызываем вручную.
     if (mobileInput.value.length <= 1) {
       e.preventDefault();
       backspaceAtCursor();
@@ -2577,12 +2572,9 @@ mobileInput.addEventListener('keydown', (e) => {
         try { mobileInput.setSelectionRange(1, 1); } catch (err) {}
       }, 0);
     }
-  } else if (e.key === 'Escape') {
-    mobileInput.blur();
-  }
+  } else if (e.key === 'Escape') mobileInput.blur();
 });
 
-/* ---- Глобальная клавиатура (десктоп) ---- */
 addEventListener('keydown', e => {
   if (state.sleeping) return;
   if (e.target === mobileInput) return;
@@ -2746,6 +2738,7 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 const modalToastEl = document.getElementById('modalToast');
 const msBalance = document.getElementById('msBalance');
+const msHealth = document.getElementById('msHealth');
 const msTasks = document.getElementById('msTasks');
 const msAchievements = document.getElementById('msAchievements');
 const msSaved = document.getElementById('msSaved');
@@ -2761,6 +2754,7 @@ function formatSavedTime(ts) {
 
 function refreshModalStats() {
   msBalance.textContent = '$' + Math.floor(state.money);
+  msHealth.textContent = Math.round(state.health) + '%';
   msTasks.textContent = String(state.completedTasks);
   const achCount = state.achievements.filter(Boolean).length;
   msAchievements.textContent = `${achCount} / ${ACHIEVEMENTS.length}`;
@@ -2797,9 +2791,7 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     refreshModalStats();
     showModalToast('✓ Прогресс сохранён!', 'ok');
     toast('💾 Прогресс сохранён', '#7ee787');
-  } else {
-    showModalToast('✗ Не удалось сохранить', 'warn');
-  }
+  } else showModalToast('✗ Не удалось сохранить', 'warn');
 });
 
 document.getElementById('clearBtn').addEventListener('click', () => {
@@ -2820,7 +2812,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   btn.innerHTML = '<span class="ic">🗑</span>Очистить прогресс';
 
   clearProgress();
-  state.money = 120; state.energy = 100; state.hunger = 100;
+  state.money = 120; state.health = 100; state.hunger = 100;
   state.caffeine = 0; state.clock = 9 * 60;
   state.completedTasks = 0;
   state.achievements = [false, false, false, false, false];
@@ -2851,6 +2843,7 @@ const clock = new THREE.Clock();
 let redrawAcc = 0;
 let autoSaveAcc = 0;
 let hudAcc = 0;
+let starvingWarned = false;
 
 function nextTask() {
   state.codeTaskIdx++;
@@ -2868,38 +2861,44 @@ function update(dt) {
     return;
   }
 
+  /* ---- Пассивные статы ---- */
   state.hunger -= 0.55 * dt;
   state.caffeine = Math.max(0, state.caffeine - 4.0 * dt);
   state.hunger = Math.max(0, Math.min(100, state.hunger));
 
-  if (!state.focused && !state.sleeping) {
-    state.energy = Math.min(130, state.energy + 0.4 * dt);
-  }
-  state.energy = Math.max(0, Math.min(130, state.energy));
-
-  if (state.energy <= 0 && !state.passedOut && !state.sleeping) {
-    state.energy = 0;
-    toast('😵 Ты вырубился от истощения...', '#ff7b72');
-    state.passedOut = true;
-    setFocused(false);
-    fadeTxt.textContent = 'ИСТОЩЕНИЕ';
-    fadeEl.style.opacity = '1';
-    setTimeout(() => { fadeTxt.style.opacity = '1'; }, 400);
-    setTimeout(() => {
-      state.energy = 55;
-      state.clock += 90;
-      state.passedOut = false;
-      fadeTxt.style.opacity = '0';
-      fadeEl.style.opacity = '0';
-      camera.rotation.z = 0;
-      toast('Проснулся. Надо поесть...', '#f59e0b');
-      saveProgress(true);
-    }, 4200);
+  /* ---- Голод отнимает здоровье ---- */
+  const starving = state.hunger <= 0;
+  if (starving) {
+    state.health -= 1.2 * dt;   // 1.2 HP в секунду → ~83 сек до смерти с 100 HP
+    if (!starvingWarned) {
+      starvingWarned = true;
+      toast('⚠️ Ты голодаешь! Здоровье тает, поешь!', '#ff7b72');
+    }
+  } else {
+    starvingWarned = false;
   }
 
+  /* ---- Регенерация при отдыхе (только если не голодаешь) ---- */
+  if (!state.focused && !state.sleeping && !starving) {
+    state.health = Math.min(100, state.health + 0.4 * dt);
+  }
+  state.health = Math.max(0, Math.min(100, state.health));
+
+  /* ---- Обморок от потери здоровья ---- */
+  if (state.health <= 0 && !state.passedOut && !state.sleeping) {
+    if (starving) collapseFromHunger();
+    else {
+      // на всякий случай — если как-то дошли до 0 без голода
+      state.health = 0;
+      collapseFromHunger();
+    }
+  }
+
+  /* ---- Время ---- */
   state.clock += dt * 1.0;
   updateTimeLighting();
 
+  /* ---- Проверка завершения задания ---- */
   if (!state.codeComplete &&
       state.codeTyped.length === state.codeTarget.length &&
       state.codeTyped === state.codeTarget) {
@@ -2926,6 +2925,7 @@ function update(dt) {
     needRedraw = true;
   }
 
+  /* ---- Анимация клавиш ---- */
   if (Math.random() < dt * 12) {
     const k = allKeys[Math.floor(Math.random() * allKeys.length)];
     k.position.y = k.userData.baseY - 0.0016;
@@ -2938,6 +2938,7 @@ function update(dt) {
     }
   }
 
+  /* ---- Доставка ---- */
   if (state.delivery) {
     state.delivery.t -= dt;
     if (state.delivery.t <= 0) {
@@ -3003,7 +3004,6 @@ function update(dt) {
     saveProgress(true);
   }
 
-  // HUD обновляем реже — экономим
   hudAcc += dt;
   if (hudAcc >= 0.1) {
     hudAcc = 0;
@@ -3016,26 +3016,43 @@ function updateHUD() {
   const mm = String(Math.floor(state.clock % 60)).padStart(2, '0');
   document.getElementById('timeVal').textContent = hh + ':' + mm;
 
-  const e = Math.round(state.energy);
-  const eBar = document.getElementById('energyBar');
-  eBar.style.width = Math.min(100, e) + '%';
-  document.getElementById('energyVal').textContent = e + '%';
-  eBar.style.background =
-    e < 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' :
-    e < 55 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' :
-             'linear-gradient(90deg,#3b82f6,#60a5fa)';
+  /* ---- Здоровье ---- */
+  const hp = Math.round(state.health);
+  const hpBar = document.getElementById('healthBar');
+  hpBar.style.width = hp + '%';
+  document.getElementById('healthVal').textContent = hp + '%';
 
-  if (!state.focused && !state.sleeping && !state.passedOut && state.energy < 130) {
-    eBar.classList.add('resting');
-  } else eBar.classList.remove('resting');
+  if (hp < 25) {
+    hpBar.style.background = 'linear-gradient(90deg,#dc2626,#ef4444)';
+  } else if (hp < 55) {
+    hpBar.style.background = 'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  } else {
+    hpBar.style.background = 'linear-gradient(90deg,#22c55e,#4ade80)';
+  }
 
+  // Регенерация — пульсация
+  if (!state.focused && !state.sleeping && !state.passedOut &&
+      state.hunger > 0 && state.health < 100) {
+    hpBar.classList.add('resting');
+  } else hpBar.classList.remove('resting');
+
+  /* ---- Сытость ---- */
   const h = Math.round(state.hunger);
-  document.getElementById('hungerBar').style.width = h + '%';
+  const hBar = document.getElementById('hungerBar');
+  hBar.style.width = h + '%';
   document.getElementById('hungerVal').textContent = h + '%';
-  document.getElementById('hungerBar').style.background =
-    h < 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' :
-             'linear-gradient(90deg,#f59e0b,#fbbf24)';
 
+  if (h < 25) {
+    hBar.style.background = 'linear-gradient(90deg,#dc2626,#ef4444)';
+  } else {
+    hBar.style.background = 'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  }
+
+  // Критический голод — пульсация
+  if (h <= 15) hBar.classList.add('starving');
+  else hBar.classList.remove('starving');
+
+  /* ---- Кофеин ---- */
   const c = Math.round(state.caffeine);
   const cBar = document.getElementById('caffeineBar');
   const cVal = document.getElementById('caffeineVal');
@@ -3056,7 +3073,8 @@ function updateHUD() {
     cVal.style.color = '';
   }
 
-  if (state.energy < 20 && !state.sleeping && !state.passedOut) {
+  /* ---- Кнопка сна ---- */
+  if (state.health < 20 && !state.sleeping && !state.passedOut) {
     sleepBtn.classList.add('visible');
   } else {
     sleepBtn.classList.remove('visible');
@@ -3070,7 +3088,6 @@ function animate() {
   update(dt);
 
   redrawAcc += dt;
-  // На мобилке перерисовываем реже
   const redrawInterval = isMobile ? 0.12 : 0.085;
   if (needRedraw || redrawAcc > redrawInterval) {
     redrawAcc = 0;
@@ -3106,7 +3123,6 @@ addEventListener('visibilitychange', () => {
   if (document.hidden) saveProgress(true);
 });
 
-// Запрет двойного тапа (zoom)
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => {
   const now = Date.now();
@@ -3114,7 +3130,6 @@ document.addEventListener('touchend', (e) => {
   lastTouchEnd = now;
 }, { passive: false });
 
-// Запрет pinch-zoom
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('gesturechange', e => e.preventDefault());
 document.addEventListener('gestureend', e => e.preventDefault());
